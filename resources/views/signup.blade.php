@@ -18,7 +18,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Roboto', sans-serif;
         }
         
         body {
@@ -30,7 +30,7 @@
         /* Header */
         .header {
             background-color: var(--primary-green);
-            padding: 15px 40px;
+            padding: 25px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -40,10 +40,17 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            text-decoration: none;
+        }
+        
+        .header-logo:hover {
+            opacity: 0.8;
         }
         
         .header-logo img {
-            height: 30px;
+            height: 45px;
         }
         
         .header-logo span {
@@ -72,7 +79,42 @@
             text-decoration: none;
             font-weight: 500;
         }
-        
+        .steps-nav {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 20px;
+            width: 100%;
+            align-items: center;
+        }
+
+        .prev-btn, .steps-nav .signup-button {
+            flex: 1;
+            min-height: 44px;
+            padding: 0; 
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            text-align: center;
+            font-size: 14px;
+            white-space: nowrap;
+            box-sizing: border-box;
+            border: none; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+        }
+
+        .prev-btn {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .steps-nav .signup-button {
+            background-color: var(--button-color);
+            color: white;
+        }
+
         /* Main Container */
         .main-container {
             flex: 1;
@@ -151,6 +193,10 @@
             border-radius: 4px;
             font-size: 14px;
         }
+
+        .form-group input.is-invalid {
+            border-color: #d32f2f;
+        }
         
         .signup-button {
             width: 100%;
@@ -172,9 +218,18 @@
         
         .error-message {
             color: #d32f2f;
-            font-size: 14px;
+            font-size: 12px;
             margin-top: 5px;
-            display: none;
+        }
+
+        .success-message {
+            color: #2e7d32;
+            font-size: 14px;
+            background-color: #e8f5e8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #c3f0c8;
         }
         
         .divider {
@@ -231,43 +286,6 @@
             text-decoration: none;
         }
         
-        .auth-message {
-            background-color: #f0f8ff;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        
-        .auth-message p {
-            margin: 0;
-            font-size: 14px;
-        }
-        
-        .auth-message .auth-controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .auth-message button {
-            padding: 5px 10px;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        
-        .continue-btn {
-            background-color: var(--dark-green);
-            color: white;
-        }
-        
-        .logout-btn {
-            background-color: #f5f5f5;
-            color: #333;
-        }
-        
         /* Additional step form fields */
         .step-container {
             display: none;
@@ -296,11 +314,6 @@
             margin-right: 10px;
         }
         
-        .steps-nav {
-            display: flex;
-            justify-content: space-between;
-        }
-        
         /* Footer */
         .footer {
             background-color: var(--primary-green);
@@ -327,13 +340,12 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="header-logo">
+        <a href="{{ route('landingpage') }}" class="header-logo" id="logoLink">
             <img src="{{ asset('Assets/logo.png') }}" alt="RecycleX Logo">
             <span>RecycleX</span>
-        </div>
+        </a>
         <div class="header-links">
             <a href="{{ route('login') }}" id="loginLink">Log In</a>
-            <a href="#" id="logoutLink" style="display: none;">Log Out</a>
         </div>
     </div>
     
@@ -342,7 +354,7 @@
         <div class="content-wrapper">
             <!-- Logo & Tagline -->
             <div class="logo-section">
-                <img src="{{ asset('Assets/logo.png') }}" alt="RecycleX Logo" class="logo-img">
+                <img src="{{ asset('Assets/logo.png') }}" alt="RecycleX Logo" class="logo-img" onclick="window.location.href='{{ url('/') }}'">
                 <div class="tagline">
                     <p>Dari UMKM untuk Bumi,</p>
                     <p>Belanja Ramah Lingkungan</p>
@@ -351,22 +363,43 @@
             
             <!-- Sign Up Form -->
             <div class="signup-section">
-                <div class="auth-message" id="authMessage">
-                    <p>You are already registered as <span id="loggedInUser"></span></p>
-                    <div class="auth-controls">
-                        <button class="continue-btn" id="continueToHome">Continue to Homepage</button>
-                        <button class="logout-btn" id="logoutBtn">Logout</button>
-                    </div>
-                </div>
-                
                 <h2 class="signup-heading">Sign Up</h2>
+
+                <!-- Display Success Message -->
+                @if(session('success'))
+                    <div class="success-message">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
+                <!-- Display Laravel Validation Errors -->
+                @if($errors->any())
+                    <div class="error-message" style="background-color: #ffeaea; padding: 10px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #d32f2f;">
+                        <strong>Please fix the following errors:</strong>
+                        <ul style="margin: 5px 0 0 20px; padding: 0;">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 
-                <form id="signupForm">
+                <form method="POST" action="{{ route('signup') }}" id="signupForm">
+                    @csrf
+                    
                     <!-- Step 1: Phone -->
                     <div class="step-container active" id="step1">
                         <div class="form-group">
                             <label for="phone">No. Telepon</label>
-                            <input type="text" id="phone" name="phone" required>
+                            <input type="text" 
+                                   id="phone" 
+                                   name="phone" 
+                                   value="{{ old('phone') }}"
+                                   class="@error('phone') is-invalid @enderror"
+                                   required>
+                            @error('phone')
+                                <div class="error-message">{{ $message }}</div>
+                            @enderror
                             <div class="error-message" id="phoneError"></div>
                         </div>
                         
@@ -376,48 +409,70 @@
                     <!-- Step 2: Additional Info -->
                     <div class="step-container" id="step2">
                         <div class="form-group">
-                            <label for="fullname">Nama Lengkap</label>
-                            <input type="text" id="fullname" name="fullname" required>
+                            <label for="name">Nama Lengkap</label>
+                            <input type="text" 
+                                   id="name" 
+                                   name="name" 
+                                   value="{{ old('name') }}"
+                                   class="@error('name') is-invalid @enderror"
+                                   required>
+                            @error('name')
+                                <div class="error-message">{{ $message }}</div>
+                            @enderror
                             <div class="error-message" id="nameError"></div>
                         </div>
                         
                         <div class="form-group">
                             <label for="email">Email</label>
-                            <input type="email" id="email" name="email" required>
+                            <input type="email" 
+                                   id="email" 
+                                   name="email" 
+                                   value="{{ old('email') }}"
+                                   class="@error('email') is-invalid @enderror"
+                                   required>
+                            @error('email')
+                                <div class="error-message">{{ $message }}</div>
+                            @enderror
                             <div class="error-message" id="emailError"></div>
                         </div>
                         
                         <div class="form-group">
                             <label for="password">Password</label>
-                            <input type="password" id="password" name="password" required>
+                            <input type="password" 
+                                   id="password" 
+                                   name="password"
+                                   class="@error('password') is-invalid @enderror"
+                                   required>
+                            @error('password')
+                                <div class="error-message">{{ $message }}</div>
+                            @enderror
                             <div class="error-message" id="passwordError"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password_confirmation">Konfirmasi Password</label>
+                            <input type="password" 
+                                   id="password_confirmation" 
+                                   name="password_confirmation"
+                                   required>
+                            <div class="error-message" id="passwordConfirmError"></div>
                         </div>
                         
                         <div class="steps-nav">
                             <button type="button" class="prev-btn" id="prevStep1">Back</button>
                             <button type="submit" class="signup-button" id="signupButton">Sign Up</button>
                         </div>
-                        <div class="error-message" id="generalError"></div>
-                    </div>
-                    
-                    <div class="divider">
-                        <span class="divider-text">OR</span>
-                    </div>
-                    
-                    <div class="social-login">
-                        <a href="#" class="social-button" id="googleSignup">
-                            <img src="{{ asset('Assets/logo google.jpg') }}" alt="Google">
-                        </a>
-                        <a href="#" class="social-button" id="facebookSignup">
-                            <img src="{{ asset('Assets/logo facebook.jpg') }}" alt="Facebook">
-                        </a>
-                    </div>
-                    
-                    <div class="signup-text">
-                        Already have an account? 
-                        <a href="{{ route('login') }}" class="login-link">Log In</a>
                     </div>
                 </form>
+
+                <div class="divider">
+                    <span class="divider-text">OR</span>
+                </div>
+                
+                <div class="signup-text">
+                    Already have an account? 
+                    <a href="{{ route('login') }}" class="login-link">Log In</a>
+                </div>
             </div>
         </div>
     </div>
@@ -428,9 +483,12 @@
     <!-- Script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Check if user is already logged in, but don't auto-redirect
-            checkAuthStatus(false);
-            
+            // Check if we have validation errors and should show step 2
+            @if($errors->has('name') || $errors->has('email') || $errors->has('password'))
+                document.getElementById('step1').classList.remove('active');
+                document.getElementById('step2').classList.add('active');
+            @endif
+
             // Setup multi-step form navigation
             const step1Button = document.getElementById('step1Button');
             const prevStep1Button = document.getElementById('prevStep1');
@@ -442,13 +500,19 @@
                 
                 // Validate phone
                 const phone = document.getElementById('phone').value.trim();
+                const phoneError = document.getElementById('phoneError');
+                
+                // Clear previous errors
+                phoneError.textContent = '';
+                phoneError.style.display = 'none';
+                
                 if (!phone) {
                     showError('phoneError', 'Please enter your phone number');
                     return;
                 }
                 
                 if (!isValidPhone(phone)) {
-                    showError('phoneError', 'Please enter a valid phone number');
+                    showError('phoneError', 'Please enter a valid phone number (format: 08xxxxxxxxxx or +628xxxxxxxxxx)');
                     return;
                 }
                 
@@ -464,213 +528,90 @@
                 step2.classList.remove('active');
                 step1.classList.add('active');
             });
-            
-            // Setup signup form submission
+
+            // Real-time password confirmation validation
+            const password = document.getElementById('password');
+            const passwordConfirmation = document.getElementById('password_confirmation');
+            const passwordConfirmError = document.getElementById('passwordConfirmError');
+
+            passwordConfirmation.addEventListener('input', function() {
+                if (passwordConfirmation.value && password.value !== passwordConfirmation.value) {
+                    showError('passwordConfirmError', 'Passwords do not match');
+                    passwordConfirmation.classList.add('is-invalid');
+                } else {
+                    passwordConfirmError.textContent = '';
+                    passwordConfirmError.style.display = 'none';
+                    passwordConfirmation.classList.remove('is-invalid');
+                }
+            });
+
+            // Form submission validation
             const signupForm = document.getElementById('signupForm');
-            signupForm.addEventListener('submit', handleSignupSubmit);
+            signupForm.addEventListener('submit', function(e) {
+                let isValid = true;
+
+                // Clear all errors first
+                resetErrors();
+
+                // Validate all fields
+                const phone = document.getElementById('phone').value.trim();
+                const name = document.getElementById('name').value.trim();
+                const email = document.getElementById('email').value.trim();
+                const passwordValue = password.value;
+                const passwordConfirmationValue = passwordConfirmation.value;
+
+                if (!phone || !isValidPhone(phone)) {
+                    showError('phoneError', 'Please enter a valid phone number');
+                    isValid = false;
+                }
+
+                if (!name) {
+                    showError('nameError', 'Please enter your full name');
+                    isValid = false;
+                }
+
+                if (!email || !isValidEmail(email)) {
+                    showError('emailError', 'Please enter a valid email address');
+                    isValid = false;
+                }
+
+                if (!passwordValue || passwordValue.length < 6) {
+                    showError('passwordError', 'Password must be at least 6 characters');
+                    isValid = false;
+                }
+
+                if (passwordValue !== passwordConfirmationValue) {
+                    showError('passwordConfirmError', 'Passwords do not match');
+                    isValid = false;
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    // Show step 2 if there are errors in step 2 fields
+                    if (!name || !email || !passwordValue || passwordValue !== passwordConfirmationValue) {
+                        step1.classList.remove('active');
+                        step2.classList.add('active');
+                    }
+                    return false;
+                }
+
+                // Show loading state
+                const signupButton = document.getElementById('signupButton');
+                signupButton.disabled = true;
+                signupButton.textContent = 'Signing up...';
+            });
             
-            // Setup social signup buttons
+            // Setup social signup buttons (placeholder)
             document.getElementById('googleSignup').addEventListener('click', function(e) {
                 e.preventDefault();
-                handleSocialSignup('google');
+                alert('Google signup will be implemented later');
             });
             
             document.getElementById('facebookSignup').addEventListener('click', function(e) {
                 e.preventDefault();
-                handleSocialSignup('facebook');
-            });
-            
-            // Setup logout functionality
-            document.getElementById('logoutBtn').addEventListener('click', function(e) {
-                e.preventDefault();
-                logout();
-            });
-            
-            document.getElementById('logoutLink').addEventListener('click', function(e) {
-                e.preventDefault();
-                logout();
-            });
-            
-            // Setup continue to homepage button
-            document.getElementById('continueToHome').addEventListener('click', function(e) {
-                e.preventDefault();
-                redirectToHomepage();
+                alert('Facebook signup will be implemented later');
             });
         });
-        
-        // Check if user is already authenticated
-        function checkAuthStatus(autoRedirect = false) {
-            const authToken = localStorage.getItem('recyclexAuthToken');
-            const userData = JSON.parse(localStorage.getItem('recyclexUserData') || '{}');
-            
-            if (authToken && userData.name) {
-                // Update the UI to show the logged-in state
-                const authMessage = document.getElementById('authMessage');
-                const loggedInUser = document.getElementById('loggedInUser');
-                const logoutLink = document.getElementById('logoutLink');
-                const loginLink = document.getElementById('loginLink');
-                
-                loggedInUser.textContent = userData.name || userData.email;
-                authMessage.style.display = 'block';
-                logoutLink.style.display = 'inline-block';
-                loginLink.style.display = 'none';
-                
-                if (autoRedirect) {
-                    // Only redirect if explicitly told to do so
-                    redirectToHomepage();
-                }
-            }
-        }
-        
-        // Handle signup form submission
-        function handleSignupSubmit(e) {
-            e.preventDefault();
-            
-            // Reset error messages
-            resetErrors();
-            
-            // Get form values
-            const phone = document.getElementById('phone').value.trim();
-            const fullname = document.getElementById('fullname').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            
-            // Validate inputs
-            let isValid = true;
-            
-            if (!phone) {
-                showError('phoneError', 'Please enter your phone number');
-                isValid = false;
-            } else if (!isValidPhone(phone)) {
-                showError('phoneError', 'Please enter a valid phone number');
-                isValid = false;
-            }
-            
-            if (!fullname) {
-                showError('nameError', 'Please enter your full name');
-                isValid = false;
-            }
-            
-            if (!email) {
-                showError('emailError', 'Please enter your email');
-                isValid = false;
-            } else if (!isValidEmail(email)) {
-                showError('emailError', 'Please enter a valid email address');
-                isValid = false;
-            }
-            
-            if (!password) {
-                showError('passwordError', 'Please enter your password');
-                isValid = false;
-            } else if (password.length < 8) {
-                showError('passwordError', 'Password must be at least 8 characters');
-                isValid = false;
-            }
-            
-            if (!isValid) {
-                return false;
-            }
-            
-            // Show loading state
-            const signupButton = document.getElementById('signupButton');
-            signupButton.disabled = true;
-            signupButton.textContent = 'Signing up...';
-            
-            // In a real application, you would send the data to your server
-            // Here we'll simulate a successful signup
-            simulateServerSignup(fullname, email, phone, password);
-        }
-        
-        // Simulate server signup (replace with actual API call in production)
-        function simulateServerSignup(fullname, email, phone, password) {
-            // Simulate network delay
-            setTimeout(function() {
-                // Create mock user data
-                const userData = {
-                    name: fullname,
-                    email: email,
-                    phone: phone,
-                    id: "user" + Math.floor(Math.random() * 1000)
-                };
-                
-                // Store authentication data
-                storeAuthData({
-                    token: "sample-auth-token-" + Math.random(),
-                    userData: userData
-                });
-                
-                // Show success message and then redirect
-                const signupButton = document.getElementById('signupButton');
-                signupButton.textContent = 'Success!';
-                
-                // Update UI to show logged in state
-                checkAuthStatus(true);
-                
-            }, 1000); // 1 second delay to simulate server request
-        }
-        
-        // Handle social signup
-        function handleSocialSignup(provider) {
-            // In a real app, you would implement OAuth flow
-            const signupButton = document.getElementById('step1Button');
-            signupButton.textContent = `Signing up with ${provider}...`;
-            
-            setTimeout(function() {
-                const userData = {
-                    name: provider === 'google' ? 'Google User' : 'Facebook User',
-                    email: `user@${provider}.com`,
-                    id: `${provider}${Math.floor(Math.random() * 1000)}`
-                };
-                
-                storeAuthData({
-                    token: `${provider}-auth-token-` + Math.random(),
-                    userData: userData
-                });
-                
-                // Update UI to show logged in state
-                checkAuthStatus(true);
-            }, 1000);
-        }
-        
-        // Store authentication data
-        function storeAuthData(authData) {
-            localStorage.setItem('recyclexAuthToken', authData.token);
-            localStorage.setItem('recyclexUserData', JSON.stringify(authData.userData));
-        }
-        
-        // Logout functionality
-        function logout() {
-            localStorage.removeItem('recyclexAuthToken');
-            localStorage.removeItem('recyclexUserData');
-            
-            // Update UI
-            const authMessage = document.getElementById('authMessage');
-            const logoutLink = document.getElementById('logoutLink');
-            const loginLink = document.getElementById('loginLink');
-            
-            authMessage.style.display = 'none';
-            logoutLink.style.display = 'none';
-            loginLink.style.display = 'inline-block';
-            
-            // Reset form
-            document.getElementById('signupForm').reset();
-            
-            // Reset to step 1
-            document.getElementById('step2').classList.remove('active');
-            document.getElementById('step1').classList.add('active');
-            
-            // Reset buttons
-            document.getElementById('step1Button').disabled = false;
-            document.getElementById('step1Button').textContent = 'Continue';
-            document.getElementById('signupButton').disabled = false;
-            document.getElementById('signupButton').textContent = 'Sign Up';
-        }
-        
-        // Redirect to homepage
-        function redirectToHomepage() {
-            // Using the homepage URL path - adjust based on your routing system
-            window.location.href = '/homepage';
-        }
         
         // Utility functions
         function isValidEmail(email) {
@@ -679,8 +620,8 @@
         }
         
         function isValidPhone(phone) {
-            // Basic validation for Indonesian phone number
-            // Allows formats: +628xxxxxxxxxx, 08xxxxxxxxxx, 628xxxxxxxxxx
+            // Indonesian phone number validation
+            // Allows: +628xxxxxxxxxx, 08xxxxxxxxxx, 628xxxxxxxxxx
             const phoneRegex = /^(\+?62|0)[0-9]{9,12}$/;
             return phoneRegex.test(phone);
         }
@@ -696,8 +637,10 @@
         function resetErrors() {
             const errorElements = document.querySelectorAll('.error-message');
             errorElements.forEach(element => {
-                element.textContent = '';
-                element.style.display = 'none';
+                if (element.id) { // Only reset JS generated errors, not Laravel errors
+                    element.textContent = '';
+                    element.style.display = 'none';
+                }
             });
         }
     </script>

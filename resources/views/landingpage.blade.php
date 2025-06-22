@@ -18,17 +18,28 @@
             height: 100vh; 
         }
         .body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Roboto', sans-serif;
         }
     </style>
 </head>
 <body class="bg-green-100">
-
-    <!-- Header -->
     <header class="bg-green-200 p-4 flex justify-between items-center">
         <div class="flex items-center">
-            <img src="{{ asset('Assets/logo.png') }}" alt="RecycleX Logo" class="h-12 w-12" />
-            <h1 class="text-2xl font-bold text-green-800 ml-2">RecycleX</h1>
+            <img 
+                src="{{ asset('Assets/logo.png') }}" 
+                alt="{{ asset('Assets/logo.png') }}" 
+                class="h-12 w-12" 
+                width="50" 
+                height="50"
+            />
+            <div class="ml-2">
+                <a href="#" class="text-green-800 underline">
+                    Download RecycleX App
+                </a>
+                <h1 class="text-2xl font-bold text-green-800">
+                    RecycleX
+                </h1>
+            </div>
         </div>
         <nav>
             <a href="#features" class="text-green-800 mx-4">Features</a>

@@ -17,7 +17,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Roboto', sans-serif;
         }
         
         body {
@@ -28,7 +28,7 @@
         
         .header {
             background-color: var(--primary-green);
-            padding: 15px 40px;
+            padding: 25px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -38,10 +38,16 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+        
+        .header-logo:hover {
+            opacity: 0.8;
         }
         
         .header-logo img {
-            height: 30px;
+            height: 45px;
         }
         
         .header-logo span {
@@ -90,6 +96,12 @@
             width: 180px;
             height: 180px;
             margin-bottom: 20px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .logo-img:hover {
+            transform: scale(1.05);
         }
         
         .tagline {
@@ -137,6 +149,10 @@
             font-size: 14px;
         }
         
+        .form-group input.is-invalid {
+            border-color: #d32f2f;
+        }
+        
         .forgot-link {
             text-align: right;
             font-size: 12px;
@@ -170,7 +186,15 @@
             color: #d32f2f;
             font-size: 14px;
             margin-top: 5px;
-            display: none;
+        }
+        
+        .success-message {
+            color: #2e7d32;
+            font-size: 14px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #e8f5e8;
+            border-radius: 4px;
         }
         
         .divider {
@@ -233,45 +257,8 @@
         
         .footer {
             background-color: var(--primary-green);
-            padding: 20px;
+            padding: 25px;
             text-align: center;
-        }
-        
-        .auth-message {
-            background-color: #f0f8ff;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        
-        .auth-message p {
-            margin: 0;
-            font-size: 14px;
-        }
-        
-        .auth-message .auth-controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .auth-message button {
-            padding: 5px 10px;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        
-        .continue-btn {
-            background-color: var(--dark-green);
-            color: white;
-        }
-        
-        .logout-btn {
-            background-color: #f5f5f5;
-            color: #333;
         }
         
         @media (max-width: 768px) {
@@ -291,20 +278,26 @@
 </head>
 <body>
     <div class="header">
-        <div class="header-logo">
+        <div class="header-logo" onclick="window.location.href='{{ url('/') }}'">
             <img src="{{ asset('Assets/logo.png') }}" alt="RecycleX Logo">
             <span>RecycleX</span>
         </div>
         <div class="header-links">
-            <a href="{{ route('signup') }}" id="signuplink">Sign Up</a>
-            <a href="#" id="logoutLink" style="display: none;">Log Out</a>
+            @guest
+                <a href="{{ route('signup') }}">Sign Up</a>
+            @else
+                <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                    @csrf
+                    <a href="#" onclick="event.preventDefault(); this.closest('form').submit();">Log Out</a>
+                </form>
+            @endguest
         </div>
     </div>
     
     <div class="main-container">
         <div class="content-wrapper">
             <div class="logo-section">
-                <img src="{{ asset('Assets/logo.png') }}" alt="RecycleX Logo" class="logo-img">
+                <img src="{{ asset('Assets/logo.png') }}" alt="RecycleX Logo" class="logo-img" onclick="window.location.href='{{ url('/') }}'">
                 <div class="tagline">
                     <p>Dari UMKM untuk Bumi,</p>
                     <p>Belanja Ramah Lingkungan</p>
@@ -312,46 +305,58 @@
             </div>
             
             <div class="login-section">
-                <div class="auth-message" id="authMessage">
-                    <p>You are already logged in as <span id="loggedInUser"></span></p>
-                    <div class="auth-controls">
-                        <button class="continue-btn" id="continueToHome">Continue to Homepage</button>
-                        <button class="logout-btn" id="logoutBtn">Logout</button>
+                @if(session('success'))
+                    <div class="success-message">
+                        {{ session('success') }}
                     </div>
-                </div>
+                @endif
+
+                @if(session('status'))
+                    <div class="success-message">
+                        {{ session('status') }}
+                    </div>
+                @endif
                 
                 <h2 class="login-heading">Log In</h2>
                 
-                <form id="loginForm">
+                <form method="POST" action="{{ route('login') }}">
+                    @csrf
+                    
                     <div class="form-group">
                         <label for="email">Email</label>
-                        <input type="email" id="email" name="email" required>
-                        <div class="error-message" id="emailError"></div>
+                        <input type="email" 
+                               id="email" 
+                               name="email" 
+                               value="{{ old('email') }}" 
+                               class="@error('email') is-invalid @enderror" 
+                               required 
+                               autocomplete="email" 
+                               autofocus>
+                        @error('email')
+                            <div class="error-message">{{ $message }}</div>
+                        @enderror
                     </div>
                     
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <input type="password" id="password" name="password" required>
-                        <div class="error-message" id="passwordError"></div>
+                        <input type="password" 
+                               id="password" 
+                               name="password" 
+                               class="@error('password') is-invalid @enderror" 
+                               required 
+                               autocomplete="current-password">
+                        @error('password')
+                            <div class="error-message">{{ $message }}</div>
+                        @enderror
                         <div class="forgot-link">
-                            <a href="#">Forgot Password?</a>
+                            <a href="{{ route('password.request') }}">Forgot Password?</a>
                         </div>
                     </div>
                     
-                    <button type="submit" class="login-button" id="loginButton">Continue</button>
-                    <div class="error-message" id="generalError"></div>
+                    <button type="submit" class="login-button">Continue</button>
                     
                     <div class="divider">
                         <span class="divider-text">OR</span>
-                    </div>
-                    
-                    <div class="social-login">
-                        <a href="#" class="social-button" id="googleLogin">
-                            <img src="{{ asset('Assets/logo google.jpg') }}" alt="Google">
-                        </a>
-                        <a href="#" class="social-button" id="facebookLogin">
-                            <img src="{{ asset('Assets/logo facebook.jpg') }}" alt="Facebook">
-                        </a>
                     </div>
                     
                     <div class="signup-text">
@@ -365,213 +370,36 @@
     <div class="footer"></div>
 
     <script>
-        // Authentication & Login functionality
+        // Set CSRF token for AJAX requests
         document.addEventListener('DOMContentLoaded', function() {
-            // Check if user is already logged in, but don't auto-redirect
-            checkAuthStatus(false);
+            const token = document.querySelector('meta[name="csrf-token"]');
+            if (token) {
+                window.Laravel = {
+                    csrfToken: token.getAttribute('content')
+                };
+            }
+        });
+
+        // Auto-hide success messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const successMessage = document.querySelector('.success-message');
+            if (successMessage) {
+                setTimeout(function() {
+                    successMessage.style.display = 'none';
+                }, 5000);
+            }
+        });
+
+        // Form validation enhancement
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const submitButton = document.querySelector('.login-button');
             
-            // Setup login form event listener
-            const loginForm = document.getElementById('loginForm');
-            loginForm.addEventListener('submit', handleLoginSubmit);
-            
-            // Setup social login buttons
-            document.getElementById('googleLogin').addEventListener('click', function(e) {
-                e.preventDefault();
-                handleSocialLogin('google');
-            });
-            
-            document.getElementById('facebookLogin').addEventListener('click', function(e) {
-                e.preventDefault();
-                handleSocialLogin('facebook');
-            });
-            
-            // Setup logout functionality
-            document.getElementById('logoutBtn').addEventListener('click', function(e) {
-                e.preventDefault();
-                logout();
-            });
-            
-            document.getElementById('logoutLink').addEventListener('click', function(e) {
-                e.preventDefault();
-                logout();
-            });
-            
-            // Setup continue to homepage button
-            document.getElementById('continueToHome').addEventListener('click', function(e) {
-                e.preventDefault();
-                redirectToHomepage();
+            form.addEventListener('submit', function() {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Logging in...';
             });
         });
-        
-        // Check if user is already authenticated, don't auto-redirect
-        function checkAuthStatus(autoRedirect = false) {
-            const authToken = localStorage.getItem('recyclexAuthToken');
-            const userData = JSON.parse(localStorage.getItem('recyclexUserData') || '{}');
-            
-            if (authToken && userData.name) {
-                // Update the UI to show the logged-in state
-                const authMessage = document.getElementById('authMessage');
-                const loggedInUser = document.getElementById('loggedInUser');
-                const logoutLink = document.getElementById('logoutLink');
-                const loginLink = document.getElementById('loginLink');
-                
-                loggedInUser.textContent = userData.name || userData.email;
-                authMessage.style.display = 'block';
-                logoutLink.style.display = 'inline-block';
-                loginLink.style.display = 'none';
-                
-                if (autoRedirect) {
-                    // Only redirect if explicitly told to do so
-                    redirectToHomepage();
-                }
-            }
-        }
-        
-        // Handle login form submission
-        function handleLoginSubmit(e) {
-            e.preventDefault();
-            
-            // Reset error messages
-            resetErrors();
-            
-            // Get form values
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            
-            // Validate inputs
-            let isValid = true;
-            
-            if (!email) {
-                showError('emailError', 'Please enter your email');
-                isValid = false;
-            } else if (!isValidEmail(email)) {
-                showError('emailError', 'Please enter a valid email address');
-                isValid = false;
-            }
-            
-            if (!password) {
-                showError('passwordError', 'Please enter your password');
-                isValid = false;
-            }
-            
-            if (!isValid) {
-                return false;
-            }
-            
-            // Show loading state
-            const loginButton = document.getElementById('loginButton');
-            loginButton.disabled = true;
-            loginButton.textContent = 'Logging in...';
-            
-            // In a real application, you would send the credentials to your server
-            // Here we'll simulate a successful login
-            simulateServerLogin(email, password);
-        }
-        
-        // Simulate server login (replace with actual API call in production)
-        function simulateServerLogin(email, password) {
-            // Simulate network delay
-            setTimeout(function() {
-                // For demo purposes, we'll simulate success
-                // In a real app, validate credentials on the server
-                
-                // Create mock user data
-                const userData = {
-                    name: "Calista Zahra", 
-                    email: email,
-                    id: "user123"
-                };
-                
-                // Store authentication data
-                storeAuthData({
-                    token: "sample-auth-token-" + Math.random(),
-                    userData: userData
-                });
-                
-                // Show success message and then redirect
-                const loginButton = document.getElementById('loginButton');
-                loginButton.textContent = 'Success!';
-                
-                // Update UI to show logged in state
-                checkAuthStatus(true);
-                
-            }, 1000); // 1 second delay to simulate server request
-        }
-        
-        // Handle social login (Google, Facebook)
-        function handleSocialLogin(provider) {
-            
-            document.getElementById('loginButton').textContent = `Logging in with ${provider}...`;
-            
-            setTimeout(function() {
-                const userData = {
-                    name: "Calista Zahra", 
-                    email: `user@${provider}.com`,
-                    id: `${provider}123`
-                };
-                
-                storeAuthData({
-                    token: `${provider}-auth-token-` + Math.random(),
-                    userData: userData
-                });
-                
-                // Update UI to show logged in state
-                checkAuthStatus(true);
-            }, 1000);
-        }
-        
-        // Store authentication data
-        function storeAuthData(authData) {
-            localStorage.setItem('recyclexAuthToken', authData.token);
-            localStorage.setItem('recyclexUserData', JSON.stringify(authData.userData));
-        }
-        
-        // Logout functionality
-        function logout() {
-            localStorage.removeItem('recyclexAuthToken');
-            localStorage.removeItem('recyclexUserData');
-            
-            // Update UI
-            const authMessage = document.getElementById('authMessage');
-            const logoutLink = document.getElementById('logoutLink');
-            const loginLink = document.getElementById('loginLink');
-            const loginButton = document.getElementById('loginButton');
-            
-            authMessage.style.display = 'none';
-            logoutLink.style.display = 'none';
-            loginLink.style.display = 'inline-block';
-            loginButton.disabled = false;
-            loginButton.textContent = 'Continue';
-            
-            // Reset form
-            document.getElementById('loginForm').reset();
-        }
-        
-        // Redirect to homepage
-        function redirectToHomepage() {
-            // Using the homepage URL path - adjust based on your routing system
-            window.location.href = '/homepage';
-        }
-        
-        // Utility functions
-        function isValidEmail(email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(email);
-        }
-        
-        function showError(elementId, message) {
-            const errorElement = document.getElementById(elementId);
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
-        }
-        
-        function resetErrors() {
-            const errorElements = document.querySelectorAll('.error-message');
-            errorElements.forEach(element => {
-                element.textContent = '';
-                element.style.display = 'none';
-            });
-        }
     </script>
 </body>
 </html>
