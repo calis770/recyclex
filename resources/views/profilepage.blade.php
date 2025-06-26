@@ -389,7 +389,7 @@
 
     <header class="bg-green-200 p-4 flex justify-between items-center">
         <div class="flex items-center">
-           <a href="/" class="flex items-center hover:opacity-80 transition-opacity">
+           <a href="homepage" class="flex items-center hover:opacity-80 transition-opacity">
             <img alt="RecycleX logo" class="h-12 w-12" height="50" src="{{ asset('Assets/logo.png') }}" width="50"/>
             <div class="ml-2">
                 <a class="text-sm text-green-700" href="#">
@@ -416,7 +416,7 @@
                     <a href="{{ route('profilepage') }}" class="active">
                         <i class="fas fa-user mr-2"></i>Profile
                     </a>
-                    <a href="{{ route('login') }}" onclick="logout()">
+                    <a href="{{ route('logout') }}" onclick="logout()">
                         <i class="fas fa-sign-out-alt mr-2"></i>Logout
                     </a>
                 </div>
@@ -628,15 +628,15 @@
 
         // Navigation functions
         function goToMyOrder() {
-            window.location.href = "/myorder";
+            window.location.href = "/myorderpage";
         }
 
         function goToRewards() {
-            window.location.href = "/rewards";
+            window.location.href = "/rewardspage";
         }
 
         function goToproductcart() {
-            window.location.href = "/cart";
+            window.location.href = "/productcartpage";
         }
 
         function goToHomepage() {

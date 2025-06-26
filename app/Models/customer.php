@@ -3,60 +3,34 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable; // Assuming Customer can log in
+use Illuminate\Notifications\Notifiable;
 
-class customer extends Model
+class Customer extends Authenticatable // Or just Model if not directly login-able
 {
-    use HasFactory;
-    public $timestamps = false;
+    use HasFactory, Notifiable;
 
-    /**
-     * Nama tabel yang digunakan oleh model.
-     *
-     * @var string
-     */
-    protected $table = 'customer';
-
-    /**
-     * Primary key dari tabel.
-     *
-     * @var string
-     */
+    protected $table = 'customer'; // Your customer table name
     protected $primaryKey = 'customer_id';
-
-    /**
-     * Primary key bukan auto-increment dan bukan integer.
-     *
-     * @var bool
-     */
     public $incrementing = false;
-
-    /**
-     * Tipe data primary key (karena char, maka string).
-     *
-     * @var string
-     */
     protected $keyType = 'string';
 
-    /**
-     * Kolom-kolom yang dapat diisi secara massal.
-     *
-     * @var array
-     */
     protected $fillable = [
         'customer_id',
-        'full_name',
+        'customer_name',
         'email',
-        'phone_number',
         'password',
-        'customer_address',
-        'username_customer',
+        // other customer fields
     ];
 
-    /**
-     * Casting atribut ke tipe data yang sesuai.
-     *
-     * @var array
-     */
-    // protected $casts = [
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    // If customer is also a user that logs in, implement these
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'customer_id', 'customer_id');
+    }
 }

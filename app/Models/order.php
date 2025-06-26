@@ -9,89 +9,75 @@ class Order extends Model
 {
     use HasFactory;
 
-    protected $table      = 'orders';
     protected $primaryKey = 'order_id';
-    public    $incrementing = false;   // karena order_id bertipe char(5)
-    protected $keyType    = 'string';
+    public $incrementing = false; // Disable auto-incrementing for custom string ID
+    protected $keyType = 'string'; // Set key type to string
 
-    /**
-     * Kolom yang boleh di‑mass‑assign.
-     * Pastikan seluruh kolom di migration tercantum di sini.
-     */
     protected $fillable = [
         'order_id',
+        'customer_id',
+        'payment_id',
         'order_date',
         'total_price',
+        'subtotal',
+        'tax_amount',
         'status',
-        'merchant_name',
-        'product_name',
-        'product_description',
-        'product_image',
-        'quantity',
-        'unit_price',
         'status_info',
-        'nama_penerima',
-        'nomor_hp',
-        'alamat_penerima',
-        'kota_penerima',
-        'kode_pos_penerima',
-        'provinsi',
-        'note_pengiriman',
-        'payment_method',
     ];
 
-    /**
-     * Casting kolom agar otomatis menjadi instance Carbon.
-     */
-    protected $casts = [
-        'order_date' => 'datetime',
-    ];
+    // Define the relationship with Customer
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_id', 'customer_id');
+    }
 
-    /* ===== accessor/helper ===== */
+    // Define the relationship with Payment
+    public function payment()
+    {
+        return $this->belongsTo(Payment::class, 'payment_id', 'payment_id');
+    }
 
-    public static function getStatusOptions(): array
+    // Define the relationship with DetailOrder
+    public function detailOrders()
+    {
+        return $this->hasMany(DetailOrder::class, 'order_id', 'order_id');
+    }
+
+    // Method to get status options
+    public static function getStatusOptions()
     {
         return [
-            'UNPAID'    => 'Belum Dibayar',
-            'PACKED'    => 'Dikemas',
-            'SENT'      => 'Dikirim',
-            'DONE'      => 'Selesai',
-            'CANCELLED' => 'Dibatalkan',
+            'PACKED' => 'Packed',
+            'SENT' => 'Sent',
+            'DONE' => 'Done',
+            'CANCELLED' => 'Cancelled',
         ];
     }
 
-    /**
-     * label_status → $order->status_label
-     */
-    public function getStatusLabelAttribute(): string
+    // Accessor for human-readable status label (optional, but good for display)
+    public function getStatusLabelAttribute()
     {
         return self::getStatusOptions()[$this->status] ?? $this->status;
     }
 
-    /**
-     * formatted_price → $order->formatted_price
-     */
-    public function getFormattedPriceAttribute(): string
-    {
-        return 'Rp ' . number_format($this->total_price, 0, ',', '.');
-    }
-
-    /**
-     * status_info → jika kolom belum terisi, isi otomatis berdasarkan status.
-     */
-    public function getStatusInfoAttribute($value): string
+    // Mutator for default status_info if not provided
+    public function getStatusInfoAttribute($value)
     {
         if ($value) {
             return $value;
         }
 
-        return match ($this->status) {
-            'UNPAID'    => 'Menunggu pembayaran dari pelanggan',
-            'PACKED'    => 'Pesanan sedang dikemas oleh penjual',
-            'SENT'      => 'Pesanan dalam perjalanan ke alamat tujuan',
-            'DONE'      => 'Pesanan telah sampai dan selesai',
-            'CANCELLED' => 'Pesanan dibatalkan',
-            default     => '',
-        };
+        switch ($this->status) {
+            case 'PACKED':
+                return 'Pesanan sedang disiapkan dan dikemas.';
+            case 'SENT':
+                return 'Pesanan telah dikirim.';
+            case 'DONE':
+                return 'Pesanan telah selesai dan diterima.';
+            case 'CANCELLED':
+                return 'Pesanan telah dibatalkan.';
+            default:
+                return 'Informasi status tidak tersedia.';
+        }
     }
 }

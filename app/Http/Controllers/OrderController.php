@@ -3,14 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\DetailOrder;
+use App\Models\DetailOrder; // Changed from detail_order
 use App\Models\Product;
 use App\Models\Customer;
-use App\Models\detail_order;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str; // Import Str facade for Str::limit
 
 class OrderController extends Controller
 {
@@ -19,6 +19,7 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
+        // Use `customer` instead of `Customer` if your relationship name is `customer` in Order model
         $query = Order::with(['customer', 'payment']);
 
         // Filter by status if provided
@@ -31,9 +32,9 @@ class OrderController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('order_id', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function($customerQuery) use ($search) {
-                      $customerQuery->where('customer_name', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('customer', function($customerQuery) use ($search) {
+                        $customerQuery->where('customer_name', 'like', "%{$search}%"); // Assuming customer_name in customer table
+                    });
             });
         }
 
@@ -57,6 +58,8 @@ class OrderController extends Controller
 
     /**
      * Store a newly created order in storage.
+     * This method would typically be used by the admin to create manual orders.
+     * For customer orders, a different process (e.g., from a cart) would populate the DB.
      */
     public function store(Request $request)
     {
@@ -64,13 +67,10 @@ class OrderController extends Controller
             'customer_id' => 'required|exists:customer,customer_id',
             'payment_id' => 'required|exists:payment,payment_id',
             'order_date' => 'required|date',
-            'total_price' => 'required|numeric|min:0',
-            'subtotal' => 'required|numeric|min:0',
-            'tax_amount' => 'nullable|numeric|min:0',
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|exists:product,product_id',
             'products.*.quantity' => 'required|integer|min:1',
-            'products.*.item_quantity' => 'required|integer|min:1'
+            // 'products.*.item_quantity' => 'required|integer|min:1' // item_quantity seems redundant if quantity already exists
         ]);
 
         if ($validator->fails()) {
@@ -82,7 +82,21 @@ class OrderController extends Controller
         DB::beginTransaction();
         try {
             // Generate order ID
-            $order_id = 'ORD' . str_pad(mt_rand(0, 99999), 5, '0', STR_PAD_LEFT);
+            $order_id = 'ORD' . str_pad(Order::count() + 1, 5, '0', STR_PAD_LEFT); // Simple incrementing ID
+
+            $total_price = 0;
+            $subtotal = 0;
+            $tax_rate = 0.1; // 10% tax
+
+            foreach ($request->input('products') as $productData) {
+                $product = Product::where('product_id', $productData['product_id'])->first();
+                if (!$product) {
+                    throw new \Exception("Product with ID {$productData['product_id']} not found.");
+                }
+                $subtotal += $product->price * $productData['quantity'];
+            }
+            $tax_amount = $subtotal * $tax_rate;
+            $total_price = $subtotal + $tax_amount;
 
             // Create order with default status
             $orderData = [
@@ -90,24 +104,26 @@ class OrderController extends Controller
                 'customer_id' => $request->input('customer_id'),
                 'payment_id' => $request->input('payment_id'),
                 'order_date' => $request->input('order_date'),
-                'total_price' => $request->input('total_price'),
-                'subtotal' => $request->input('subtotal'),
-                'tax_amount' => $request->input('tax_amount', 0),
-                'status' => 'UNPAID' // Default status
+                'total_price' => $total_price,
+                'subtotal' => $subtotal,
+                'tax_amount' => $tax_amount,
+                'status' => 'UNPAID', // Default status for new orders
+                'status_info' => 'Menunggu pembayaran dari pelanggan'
             ];
 
             $order = Order::create($orderData);
 
             // Create order details
             foreach ($request->input('products') as $productData) {
-                $detail_id = 'DTL' . str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
-                
-                detail_order::create([
+                $detail_id = 'DTL' . str_pad(DetailOrder::count() + 1, 6, '0', STR_PAD_LEFT); // Simple incrementing ID
+                $product = Product::where('product_id', $productData['product_id'])->first(); // Fetch product again for its price
+
+                DetailOrder::create([
                     'detail_id' => $detail_id,
                     'order_id' => $order_id,
                     'product_id' => $productData['product_id'],
                     'quantity' => $productData['quantity'],
-                    'item_quantity' => $productData['item_quantity']
+                    'price_at_order' => $product->price, // Store the price at the time of order
                 ]);
             }
 
@@ -171,16 +187,13 @@ class OrderController extends Controller
         $validator = Validator::make($request->all(), [
             'customer_id' => 'required|exists:customer,customer_id',
             'payment_id' => 'required|exists:payment,payment_id',
-            'total_price' => 'required|numeric|min:0',
             'order_date' => 'required|date',
-            'tax_amount' => 'nullable|numeric|min:0',
-            'subtotal' => 'required|numeric|min:0',
             'status' => 'required|in:UNPAID,PACKED,SENT,DONE,CANCELLED',
             'status_info' => 'nullable|string|max:500',
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|exists:product,product_id',
             'products.*.quantity' => 'required|integer|min:1',
-            'products.*.item_quantity' => 'required|integer|min:1'
+            // 'products.*.item_quantity' => 'required|integer|min:1' // Redundant field removed
         ]);
 
         if ($validator->fails()) {
@@ -193,14 +206,29 @@ class OrderController extends Controller
         try {
             $order = Order::where('order_id', $id)->firstOrFail();
 
+            $total_price = 0;
+            $subtotal = 0;
+            $tax_rate = 0.1; // 10% tax
+
+            foreach ($request->input('products') as $productData) {
+                $product = Product::where('product_id', $productData['product_id'])->first();
+                if (!$product) {
+                    throw new \Exception("Product with ID {$productData['product_id']} not found.");
+                }
+                $subtotal += $product->price * $productData['quantity'];
+            }
+            $tax_amount = $subtotal * $tax_rate;
+            $total_price = $subtotal + $tax_amount;
+
+
             // Update order data
             $orderData = [
                 'customer_id' => $request->input('customer_id'),
                 'payment_id' => $request->input('payment_id'),
-                'total_price' => $request->input('total_price'),
+                'total_price' => $total_price,
+                'subtotal' => $subtotal,
+                'tax_amount' => $tax_amount,
                 'order_date' => $request->input('order_date'),
-                'tax_amount' => $request->input('tax_amount', 0),
-                'subtotal' => $request->input('subtotal'),
                 'status' => $request->input('status'),
                 'status_info' => $request->input('status_info')
             ];
@@ -208,18 +236,19 @@ class OrderController extends Controller
             $order->update($orderData);
 
             // Delete existing order details
-            detail_order::where('order_id', $id)->delete();
+            DetailOrder::where('order_id', $id)->delete(); // Changed from detail_order
 
             // Create new order details
             foreach ($request->input('products') as $productData) {
-                $detail_id = 'DTL' . str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
-                
-                detail_order::create([
+                $detail_id = 'DTL' . str_pad(DetailOrder::count() + 1, 6, '0', STR_PAD_LEFT); // Simple incrementing ID for new details
+                $product = Product::where('product_id', $productData['product_id'])->first(); // Fetch product again for its price
+
+                DetailOrder::create([ // Changed from detail_order
                     'detail_id' => $detail_id,
                     'order_id' => $id,
                     'product_id' => $productData['product_id'],
                     'quantity' => $productData['quantity'],
-                    'item_quantity' => $productData['item_quantity']
+                    'price_at_order' => $product->price, // Store the price at the time of order
                 ]);
             }
 
@@ -256,8 +285,12 @@ class OrderController extends Controller
             $order = Order::where('order_id', $id)->firstOrFail();
             
             $order->status = $request->status;
-            if ($request->has('status_info') && $request->status_info !== '') {
+            // Only update status_info if it's provided and not empty
+            if ($request->filled('status_info')) {
                 $order->status_info = $request->status_info;
+            } else {
+                // If status_info is empty, set it to the default based on new status
+                $order->status_info = $order->getStatusInfoAttribute(null); // Pass null to get default
             }
             
             $order->save();
@@ -269,7 +302,7 @@ class OrderController extends Controller
                     'order_id' => $order->order_id,
                     'status' => $order->status,
                     'status_label' => $order->status_label,
-                    'status_info' => $order->status_info
+                    'status_info' => $order->status_info // Return the actual (potentially default) status_info
                 ]
             ]);
 
@@ -300,11 +333,18 @@ class OrderController extends Controller
         }
 
         try {
-            $updated = Order::whereIn('order_id', $request->order_ids)
-                           ->update([
-                               'status' => $request->status,
-                               'updated_at' => now()
-                           ]);
+            $updated = 0;
+            DB::beginTransaction();
+            foreach ($request->order_ids as $orderId) {
+                $order = Order::where('order_id', $orderId)->first();
+                if ($order) {
+                    $order->status = $request->status;
+                    $order->status_info = $order->getStatusInfoAttribute(null); // Set default info for bulk
+                    $order->save();
+                    $updated++;
+                }
+            }
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -313,6 +353,7 @@ class OrderController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            DB::rollback();
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal memperbarui pesanan: ' . $e->getMessage()
@@ -329,19 +370,36 @@ class OrderController extends Controller
         try {
             $order = Order::where('order_id', $id)->firstOrFail();
             
-            // Delete order details first
-            detail_order::where('order_id', $id)->delete();
+            // Delete associated detail orders first to respect foreign key constraints
+            $order->detailOrders()->delete(); // Using relationship to delete
             
             // Delete the order
             $order->delete();
             
             DB::commit();
 
+            // Check if request expects JSON (for AJAX)
+            if (request()->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Pesanan berhasil dihapus.'
+                ]);
+            }
+
             return redirect()->route('orders.index')
                 ->with('success', 'Pesanan berhasil dihapus.');
 
         } catch (\Exception $e) {
             DB::rollback();
+            
+            // Check if request expects JSON (for AJAX)
+            if (request()->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus pesanan: ' . $e->getMessage()
+                ], 500);
+            }
+
             return redirect()->route('orders.index')
                 ->with('error', 'Gagal menghapus pesanan: ' . $e->getMessage());
         }
@@ -379,9 +437,16 @@ class OrderController extends Controller
             $subtotal = 0;
             
             foreach ($products as $productData) {
+                // Ensure product_id and quantity are present and valid
+                if (!isset($productData['product_id']) || !isset($productData['quantity'])) {
+                    throw new \Exception("Invalid product data provided.");
+                }
                 $product = Product::where('product_id', $productData['product_id'])->first();
                 if ($product) {
                     $subtotal += $product->price * $productData['quantity'];
+                } else {
+                    // Optionally, handle cases where product is not found
+                    throw new \Exception("Product with ID {$productData['product_id']} not found for calculation.");
                 }
             }
             
@@ -404,57 +469,13 @@ class OrderController extends Controller
     }
 
     /**
-     * Get orders for frontend display (API endpoint)
+     * Get orders for frontend display (API endpoint for all customers - NOT RECOMMENDED for customer's My Order)
      */
-    public function getOrdersForFrontend(Request $request)
-    {
-        try {
-            $query = Order::with(['customer', 'detailOrders.product']);
-
-            // Filter by status if provided
-            if ($request->has('status') && $request->status !== 'all') {
-                $query->where('status', strtoupper($request->status));
-            }
-
-            // Filter by customer if authenticated (implement based on your auth system)
-            // if (auth()->check()) {
-            //     $query->where('customer_id', auth()->user()->customer_id);
-            // }
-
-            $orders = $query->orderBy('order_date', 'desc')->get();
-
-            $formattedOrders = $orders->map(function($order) {
-                // Get first product details for display
-                $firstDetail = $order->detailOrders->first();
-                $product = $firstDetail ? $firstDetail->product : null;
-
-                return [
-                    'order_id' => $order->order_id,
-                    'merchant' => $product ? $product->merchant_name ?? 'RecycleX Store' : 'RecycleX Store',
-                    'name' => $product ? $product->product_name : 'Mixed Products',
-                    'description1' => $product ? $product->description : 'Multiple items in this order',
-                    'description2' => "Total items: {$order->detailOrders->sum('quantity')}",
-                    'image' => $product && $product->image ? asset('storage/' . $product->image) : asset('Assets/default-product.png'),
-                    'price' => 'Rp ' . number_format($order->subtotal, 0, ',', '.'),
-                    'total' => 'Rp ' . number_format($order->total_price, 0, ',', '.'),
-                    'status' => $order->status,
-                    'statusInfo' => $order->status_info,
-                    'order_date' => $order->order_date->format('d/m/Y H:i')
-                ];
-            });
-
-            return response()->json([
-                'success' => true,
-                'orders' => $formattedOrders
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal mengambil data pesanan: ' . $e->getMessage()
-            ], 500);
-        }
-    }
+    // public function getOrdersForFrontend(Request $request) // DEPRECATED for customer's view
+    // {
+    //     // This method would show ALL orders. For customer's "My Order", use CustomerOrderController.
+    //     // Kept for reference but won't be used by the customer frontend.
+    // }
 
     /**
      * Get order statistics for dashboard
@@ -464,7 +485,6 @@ class OrderController extends Controller
         try {
             $stats = [
                 'total_orders' => Order::count(),
-                'unpaid_orders' => Order::where('status', 'UNPAID')->count(),
                 'packed_orders' => Order::where('status', 'PACKED')->count(),
                 'sent_orders' => Order::where('status', 'SENT')->count(),
                 'completed_orders' => Order::where('status', 'DONE')->count(),

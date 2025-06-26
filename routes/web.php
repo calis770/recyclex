@@ -12,25 +12,37 @@ use App\Http\Controllers\ExchangeItemController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\VoucherController;
-use App\Http\Controllers\HomeController; // Pastikan ini diimpor
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\CustomerController;
 use App\Models\Order;
 use Illuminate\Support\Facades\Auth;
 
 // Public routes - dapat diakses tanpa login
-Route::get('/landingpage', function () {
+Route::get('/', function () {
     return view('landingpage');
-})->name('landingpage');
-
+})->name('root');
 
 // Homepage public routes - untuk menampilkan produk
 // Kita bisa mengarahkan '/' dan '/homepage' ke HomeController@index
-Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/homepage', [HomeController::class, 'index'])->name('home');
 Route::get('/homepage', [HomeController::class, 'index'])->name('homepage');
 
 // Tambahkan Route::get('/products') di sini untuk diakses publik
 // Ini akan menjadi daftar semua produk untuk customer, jadi tidak perlu middleware admin
-Route::get('/products', [HomeController::class, 'index'])->name('products.customer.index'); // <-- UBAH DI SINI
+Route::get('/products', [HomeController::class, 'index'])->name('products.customer.index'); 
+
+// Route untuk "Beli Sekarang" dari product detail
+Route::match(['get', 'post'], '/paymentpage/buy-now', [PaymentController::class, 'showPaymentPage'])->name('paymentpage.buynow');
+
+// Route untuk checkout dari cart
+Route::post('/paymentpage/cart-checkout', [PaymentController::class, 'handleCartCheckout'])->name('paymentpage.cart.checkout');
+
+// Route untuk proses pembayaran (sama untuk keduanya)
+Route::post('/paymentpage/process', [PaymentController::class, 'processPayment'])->name('paymentpage.process');
+
+// Route untuk halaman sukses order
+Route::get('/order/success/{order_id}', [PaymentController::class, 'orderSuccess'])->name('order.success');
 
 Route::get('/search', [HomeController::class, 'search'])->name('products.search');
 Route::get('/category/{category}', [HomeController::class, 'filterByCategory'])->name('products.category');
@@ -48,6 +60,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/carts/create', [CartController::class, 'create'])->name('carts.create.');
 Route::post('add/cust/carts', [CartController::class, 'store'])->name('carts.store');
+
 // Protected routes - memerlukan login
 Route::middleware('auth')->group(function () {
 
@@ -62,36 +75,28 @@ Route::middleware('auth')->group(function () {
         Route::get('/homeseller', function () {
             return view('homeseller');
         })->name('homeseller');
-
-        // Product Routes untuk admin (gunakan URI yang berbeda atau biarkan ProductController@index ini hanya untuk CRUD admin)
-        // Jika Anda ingin admin juga melihat daftar produk (misal untuk pengelolaan), gunakan URI seperti '/admin/products'
-        // JIKA ANDA INGIN MENGGUNAKAN ProductController@index SEBAGAI LIST PRODUK ADMIN, GANTI DENGAN INI:
-        // Route::get('/admin/products', [ProductController::class, 'index'])->name('admin.products.index');
-        // DAN HAPUS BARIS INI: Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-        // KARENA ProductController::class, 'index' sudah di assign ke /products di public routes
         
-        // Untuk menghindari konflik, saya sarankan merubah route products.index ini menjadi admin.products.index
-        Route::get('/admin/products', [ProductController::class, 'index'])->name('products.index'); // <-- UBAH NAMA ROUTE JADI products.admin.index JIKA PERLU
+        // Untuk menghindari konflik,  merubah route products.index ini menjadi admin.products.index
+        Route::get('/admin/products', [ProductController::class, 'index'])->name('products.index');
 
         Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
-        Route::post('/products', [ProductController::class, 'store'])->name('products.store'); // Ini juga perlu diubah jadi admin/products
+        Route::post('/products', [ProductController::class, 'store'])->name('products.store');
         // Penting: Pastikan show product (products.show) tidak konflik dengan productdetail
         // Sebaiknya, route show product admin adalah '/admin/products/{id}'
-        Route::get('/products/{id}', [ProductController::class, 'show'])->name('products.show'); // Konflik dengan public productdetail
+        Route::get('/products/{id}', [ProductController::class, 'show'])->name('products.show');
         Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('products.edit');
         Route::put('/products/{id}', [ProductController::class, 'update'])->name('products.update');
         Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
-
+       
         // ... (Route-route Admin lainnya tetap sama)
-        // Order Routes
-        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-        Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
-        Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
-        Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
-        Route::get('/orders/{id}/edit', [OrderController::class, 'edit'])->name('orders.edit');
-        Route::put('/orders/{id}', [OrderController::class, 'update'])->name('orders.update');
-        Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
-
+              Route::get('/orders', [App\Http\Controllers\OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/create', [App\Http\Controllers\OrderController::class, 'create'])->name('orders.create');
+    Route::post('/orders', [App\Http\Controllers\OrderController::class, 'store'])->name('orders.store');
+    Route::get('/orders/{order_id}', [App\Http\Controllers\OrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{order_id}/edit', [App\Http\Controllers\OrderController::class, 'edit'])->name('orders.edit');
+    Route::put('/orders/{order_id}', [App\Http\Controllers\OrderController::class, 'update'])->name('orders.update');
+    Route::delete('/orders/{order_id}', [App\Http\Controllers\OrderController::class, 'destroy'])->name('orders.destroy');
+    
         // Seller Routes
         Route::get('/sellers', [SellerController::class, 'index'])->name('sellers.index');
         Route::get('/sellers/create', [SellerController::class, 'create'])->name('sellers.create');
@@ -127,15 +132,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/exchange_items/{id}/edit', [ExchangeItemController::class, 'edit'])->name('exchange_items.edit');
         Route::put('/exchange_items/{id}', [ExchangeItemController::class, 'update'])->name('exchange_items.update');
         Route::delete('/exchange_items/{id}', [ExchangeItemController::class, 'destroy'])->name('exchange_items.destroy');
-
-        // Payment Routes
-        Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
-        Route::get('/payments/create', [PaymentController::class, 'create'])->name('payments.create');
-        Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
-        Route::get('/payments/{id}', [PaymentController::class, 'show'])->name('payments.show');
-        Route::get('/payments/{id}/edit', [PaymentController::class, 'edit'])->name('payments.edit');
-        Route::put('/payments/{id}', [PaymentController::class, 'update'])->name('payments.update');
-        Route::delete('/payments/{id}', [PaymentController::class, 'destroy'])->name('payments.destroy');
 
         // Shipping Routes
         Route::get('/shippings', [ShippingController::class, 'index'])->name('shippings.index');
@@ -179,10 +175,6 @@ Route::middleware('auth')->group(function () {
 
     // Customer routes - hanya untuk user dengan role customer
     Route::middleware('role:customer')->group(function () {
-        Route::get('/paymentpage', function () {
-        return view('paymentpage');
-        })->name('paymentpage');
-        
         // Cart route
         Route::get('/productcart', function () {
             return view('productcart');
@@ -202,10 +194,5 @@ Route::middleware('auth')->group(function () {
         Route::get('/greencashpage', function () {
             return view('greencashpage');
         })->name('greencashpage');
-
-        // Payment routes untuk customer
-        Route::get('/paymentpage', function () {
-            return view('paymentpage');
-        })->name('paymentpage');
     });
 });

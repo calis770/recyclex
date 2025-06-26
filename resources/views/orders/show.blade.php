@@ -14,7 +14,6 @@
             padding: 0.5rem 1rem;
             border-radius: 1rem;
         }
-        .status-UNPAID { background-color: #ffc107; color: #000; }
         .status-PACKED { background-color: #17a2b8; color: #fff; }
         .status-SENT { background-color: #6f42c1; color: #fff; }
         .status-DONE { background-color: #28a745; color: #fff; }
@@ -246,7 +245,6 @@
                         <div class="mb-3">
                             <label for="new_status" class="form-label">Status Baru</label>
                             <select class="form-select" id="new_status" name="status" required>
-                                <option value="UNPAID" {{ $order->status == 'UNPAID' ? 'selected' : '' }}>Belum Dibayar</option>
                                 <option value="PACKED" {{ $order->status == 'PACKED' ? 'selected' : '' }}>Dikemas</option>
                                 <option value="SENT" {{ $order->status == 'SENT' ? 'selected' : '' }}>Dikirim</option>
                                 <option value="DONE" {{ $order->status == 'DONE' ? 'selected' : '' }}>Selesai</option>

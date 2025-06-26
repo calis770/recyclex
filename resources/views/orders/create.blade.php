@@ -10,7 +10,6 @@
 </head>
 <body>
     <div class="container my-4">
-        <!-- Flash Messages -->
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
@@ -57,16 +56,46 @@
                         
                         <div class="col-md-6">
                             <div class="mb-3">
+                                <label for="customer_id" class="form-label">Customer <span class="text-danger">*</span></label>
+                                <select class="form-select" id="customer_id" name="customer_id" required>
+                                    <option value="">Pilih Customer</option>
+                                    {{-- Assuming $customers is passed from the backend --}}
+                                    @foreach($customers as $customer)
+                                        <option value="{{ $customer->customer_id }}" {{ old('customer_id') == $customer->customer_id ? 'selected' : '' }}>
+                                            {{ $customer->customer_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="payment_id" class="form-label">Metode Pembayaran <span class="text-danger">*</span></label>
+                                <select class="form-select" id="payment_id" name="payment_id" required>
+                                    <option value="">Pilih Metode Pembayaran</option>
+                                    {{-- Assuming $payments is passed from the backend --}}
+                                    @foreach($payments as $payment)
+                                        <option value="{{ $payment->payment_id }}" {{ old('payment_id') == $payment->payment_id ? 'selected' : '' }}>
+                                            {{ $payment->payment_method }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
                                 <label for="total_price" class="form-label">Total Harga <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text">Rp</span>
-                                    <input type="number" class="form-control" id="total_price" name="total_price" value="{{ old('total_price') }}" min="0" step="0.01" required>
+                                    <input type="number" class="form-control" id="total_price" name="total_price" value="{{ old('total_price') }}" min="0" step="0.01" required readonly> {{-- Added readonly as it's calculated --}}
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Product Selection Section -->
                     <div class="card mt-4">
                         <div class="card-header">
                             <h5 class="card-title mb-0">Pilih Produk</h5>
@@ -112,14 +141,13 @@
                         </div>
                     </div>
 
-                    <!-- Total Summary -->
                     <div class="card mt-4">
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-6 offset-md-6">
                                     <table class="table table-borderless">
                                         <tr>
-                                            <td>Subtotal:</td>
+                                            <td>Subtotal Produk:</td>
                                             <td class="text-end" id="calculatedSubtotal">Rp 0</td>
                                         </tr>
                                         <tr>
@@ -127,7 +155,7 @@
                                             <td class="text-end" id="calculatedTax">Rp 0</td>
                                         </tr>
                                         <tr class="table-dark">
-                                            <td><strong>Total:</strong></td>
+                                            <td><strong>Total Keseluruhan:</strong></td>
                                             <td class="text-end"><strong id="calculatedTotal">Rp 0</strong></td>
                                         </tr>
                                     </table>
@@ -152,27 +180,33 @@
         // Add product row
         document.getElementById('addProduct').addEventListener('click', function() {
             const productSection = document.getElementById('productSection');
-            const newRow = document.querySelector('.product-row').cloneNode(true);
-            
-            // Update input names
-            const selects = newRow.querySelectorAll('select, input');
-            selects.forEach(input => {
+            const firstProductRow = document.querySelector('.product-row');
+            const newRow = firstProductRow.cloneNode(true); // Clone the first row
+
+            // Reset values and update input names for the new row
+            newRow.querySelectorAll('select, input').forEach(input => {
                 if (input.name) {
                     input.name = input.name.replace(/\[\d+\]/, `[${productIndex}]`);
                 }
-                if (input.type !== 'button') {
-                    input.value = input.type === 'number' ? 1 : '';
+                // Reset select to default option and quantity inputs to 1
+                if (input.tagName === 'SELECT') {
+                    input.value = ''; // Reset select to "Pilih Produk"
+                } else if (input.type === 'number') {
+                    input.value = 1; // Reset quantity and item quantity to 1
+                } else if (input.classList.contains('subtotal-display')) {
+                    input.value = ''; // Clear subtotal display
                 }
             });
             
-            // Show remove button
+            // Show remove button for cloned rows
             newRow.querySelector('.remove-product').style.display = 'block';
             
             productSection.appendChild(newRow);
             productIndex++;
             
-            // Add event listeners to new row
+            // Add event listeners to the newly added row
             addEventListeners(newRow);
+            calculateTotal(); // Recalculate total after adding a new row
         });
 
         // Remove product row
@@ -184,9 +218,13 @@
         });
 
         // Add event listeners to existing and new rows
-        function addEventListeners(row = document) {
-            row.querySelectorAll('.product-select, .quantity-input, .item-quantity-input').forEach(input => {
+        function addEventListeners(rowContainer = document) {
+            rowContainer.querySelectorAll('.product-select, .quantity-input, .item-quantity-input').forEach(input => {
                 input.addEventListener('change', function() {
+                    calculateRowSubtotal(this.closest('.product-row'));
+                    calculateTotal();
+                });
+                input.addEventListener('input', function() { // Also listen to 'input' for live updates
                     calculateRowSubtotal(this.closest('.product-row'));
                     calculateTotal();
                 });
@@ -196,11 +234,11 @@
         // Calculate subtotal for a single row
         function calculateRowSubtotal(row) {
             const select = row.querySelector('.product-select');
-            const quantity = row.querySelector('.quantity-input').value || 0;
-            const itemQuantity = row.querySelector('.item-quantity-input').value || 0;
+            const quantity = parseFloat(row.querySelector('.quantity-input').value) || 0;
+            const itemQuantity = parseFloat(row.querySelector('.item-quantity-input').value) || 0;
             const subtotalDisplay = row.querySelector('.subtotal-display');
             
-            if (select.value && quantity && itemQuantity) {
+            if (select.value) {
                 const price = parseFloat(select.options[select.selectedIndex].dataset.price) || 0;
                 const subtotal = price * quantity * itemQuantity;
                 subtotalDisplay.value = 'Rp ' + new Intl.NumberFormat('id-ID').format(subtotal);
@@ -215,10 +253,10 @@
             
             document.querySelectorAll('.product-row').forEach(row => {
                 const select = row.querySelector('.product-select');
-                const quantity = row.querySelector('.quantity-input').value || 0;
-                const itemQuantity = row.querySelector('.item-quantity-input').value || 0;
+                const quantity = parseFloat(row.querySelector('.quantity-input').value) || 0;
+                const itemQuantity = parseFloat(row.querySelector('.item-quantity-input').value) || 0;
                 
-                if (select.value && quantity && itemQuantity) {
+                if (select.value) {
                     const price = parseFloat(select.options[select.selectedIndex].dataset.price) || 0;
                     subtotal += price * quantity * itemQuantity;
                 }
@@ -231,11 +269,14 @@
             document.getElementById('calculatedSubtotal').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(subtotal);
             document.getElementById('calculatedTax').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(tax);
             document.getElementById('calculatedTotal').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(total);
-            document.getElementById('total_price').value = total;
+            document.getElementById('total_price').value = total.toFixed(2); // Set the hidden input for total_price, format to 2 decimal places
         }
 
-        // Initialize event listeners
-        addEventListeners();
+        // Initialize event listeners and calculate total on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            addEventListeners();
+            calculateTotal(); // Calculate initial total
+        });
     </script>
 </body>
 </html>

@@ -152,11 +152,11 @@
     <h2 class="text-2xl font-bold text-green-800 mb-4 text-center">Category</h2>
     <div class="flex justify-center">
         <div class="flex space-x-4">
-            <div class="flex-none transition-transform transform hover:scale-95 hover:shadow-lg cursor-pointer" onclick="filterByCategory('Pakaian Wanita')">
+            <div class="flex-none transition-transform transform hover:scale-95 hover:shadow-lg cursor-pointer" onclick="filterByCategory('Pakaian & Aksesoris')">
                 <div class="w-48 h-72 bg-gradient-to-br from-pink-200 to-purple-300 rounded-lg flex items-center justify-center">
                     <i class="fas fa-tshirt text-6xl text-purple-600"></i>
                 </div>
-                <p class="text-center mt-2">Pakaian Wanita</p>
+                <p class="text-center mt-2">Pakaian & Aksesoris</p>
             </div>
             <div class="flex-none transition-transform transform hover:scale-95 hover:shadow-lg cursor-pointer" onclick="filterByCategory('Aksesoris Rumah')">
                 <div class="w-48 h-72 bg-gradient-to-br from-yellow-200 to-orange-300 rounded-lg flex items-center justify-center">
@@ -164,11 +164,11 @@
                 </div>
                 <p class="text-center mt-2">Aksesoris Rumah</p>
             </div>
-            <div class="flex-none transition-transform transform hover:scale-95 hover:shadow-lg cursor-pointer" onclick="filterByCategory('Tas')">
+            <div class="flex-none transition-transform transform hover:scale-95 hover:shadow-lg cursor-pointer" onclick="filterByCategory('Tas & Dompet')">
                 <div class="w-48 h-72 bg-gradient-to-br from-blue-200 to-indigo-300 rounded-lg flex items-center justify-center">
                     <i class="fas fa-shopping-bag text-6xl text-indigo-600"></i>
                 </div>
-                <p class="text-center mt-2">Tas Wanita</p>
+                <p class="text-center mt-2">Tas & Dompet</p>
             </div>
             <div class="flex-none transition-transform transform hover:scale-95 hover:shadow-lg cursor-pointer" onclick="filterByCategory('Perlengkapan Rumah')">
                 <div class="w-48 h-72 bg-gradient-to-br from-green-200 to-teal-300 rounded-lg flex items-center justify-center">

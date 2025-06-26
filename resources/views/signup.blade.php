@@ -338,14 +338,20 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="header">
-        <a href="{{ route('landingpage') }}" class="header-logo" id="logoLink">
+        <div class="header-logo" onclick="window.location.href='{{ url('/') }}'">
             <img src="{{ asset('Assets/logo.png') }}" alt="RecycleX Logo">
             <span>RecycleX</span>
-        </a>
+        </div>
         <div class="header-links">
-            <a href="{{ route('login') }}" id="loginLink">Log In</a>
+            @guest
+                <a href="{{ route('login') }}">Log In</a>
+            @else
+                <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                    @csrf
+                    <a href="#" onclick="event.preventDefault(); this.closest('form').submit();">Log Out</a>
+                </form>
+            @endguest
         </div>
     </div>
     

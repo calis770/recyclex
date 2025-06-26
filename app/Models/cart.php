@@ -5,54 +5,130 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class cart extends Model
+class Cart extends Model
 {
     use HasFactory;
-    public $timestamps = false;
 
-    /**
-     * Nama tabel yang digunakan oleh model.
-     *
-     * @var string
-     */
     protected $table = 'cart';
-
+    protected $primaryKey = 'id';
+    
     /**
-     * Primary key dari tabel.
+     * The attributes that are mass assignable.
      *
-     * @var string
-     */
-    protected $primaryKey = 'id_cart';
-
-    /**
-     * Primary key bukan auto-increment dan bukan integer.
-     *
-     * @var bool
-     */
-    public $incrementing = false;
-
-    /**
-     * Tipe data primary key (karena char, maka string).
-     *
-     * @var string
-     */
-    protected $keyType = 'string';
-
-    /**
-     * Kolom-kolom yang dapat diisi secara massal.
-     *
-     * @var array
+     * @var array<int, string>
      */
     protected $fillable = [
         'id_cart',
+        'product_id',
         'quantity',
+        'variation',
         'total_price',
     ];
 
     /**
-     * Casting atribut ke tipe data yang sesuai.
+     * The attributes that should be cast.
      *
-     * @var array
+     * @var array<string, string>
      */
-    // protected $casts = [
+    protected $casts = [
+        'quantity' => 'integer',
+        'total_price' => 'decimal:2',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    /**
+     * Get the product associated with the cart item.
+     */
+    public function product()
+    {
+        return $this->belongsTo(Product::class, 'product_id', 'product_id');
+    }
+
+    /**
+     * Get formatted total price
+     */
+    public function getFormattedTotalPriceAttribute()
+    {
+        return 'Rp ' . number_format($this->total_price, 0, ',', '.');
+    }
+
+    /**
+     * Get formatted unit price
+     */
+    public function getFormattedUnitPriceAttribute()
+    {
+        if ($this->quantity > 0) {
+            $unitPrice = $this->total_price / $this->quantity;
+            return 'Rp ' . number_format($unitPrice, 0, ',', '.');
+        }
+        return 'Rp 0';
+    }
+
+    /**
+     * Scope to get cart items with products
+     */
+    public function scopeWithProduct($query)
+    {
+        return $query->with('product');
+    }
+
+    /**
+     * Scope to get cart items by product
+     */
+    public function scopeByProduct($query, $productId)
+    {
+        return $query->where('product_id', $productId);
+    }
+
+    /**
+     * Scope to get cart items by variation
+     */
+    public function scopeByVariation($query, $variation)
+    {
+        return $query->where('variation', $variation);
+    }
+
+    /**
+     * Check if cart item has variation
+     */
+    public function hasVariation()
+    {
+        return !empty($this->variation);
+    }
+
+    /**
+     * Get display name with variation
+     */
+    public function getDisplayNameAttribute()
+    {
+        $name = $this->product ? $this->product->product_name : 'Unknown Product';
+        
+        if ($this->hasVariation()) {
+            $name .= ' (' . $this->variation . ')';
+        }
+        
+        return $name;
+    }
+
+    /**
+     * Calculate total price based on quantity and product price
+     */
+    public function calculateTotalPrice()
+    {
+        if ($this->product && $this->quantity > 0) {
+            return $this->product->price * $this->quantity;
+        }
+        return 0;
+    }
+
+    /**
+     * Update total price automatically
+     */
+    public function updateTotalPrice()
+    {
+        $this->total_price = $this->calculateTotalPrice();
+        $this->save();
+        return $this;
+    }
 }

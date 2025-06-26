@@ -17,11 +17,16 @@
 
         .dashboard-item {
             background-color: #fff;
-            padding: 20px;
+            padding: 35px;
             border-radius: 8px;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: 100%; 
         }
-
         .dashboard-item h3 {
             color: #2b5329;
             font-size: 1.5rem;
@@ -43,10 +48,10 @@
             display: inline-block;
             background-color: #2b5329;
             color: white;
-            padding: 10px 15px;
+            padding: 15px 25px;
             border-radius: 5px;
             text-decoration: none;
-            margin-top: 10px;
+            margin-top: 15px;
             transition: background-color 0.3s;
         }
 
@@ -144,7 +149,7 @@
     </header>
 
     <main class="p-6">
-        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             <div class="dashboard-item">
                 <i class="fas fa-box icon"></i>
@@ -165,27 +170,6 @@
                 <h3>Coins</h3>
                 <p>Add RecycleX Customer Coins and manage reward programs.</p>
                 <a href="{{ route('coins.index') }}" class="link-button">Manage Coins</a>
-            </div>
-
-             <div class="dashboard-item">
-                <i class="fas fa-exchange-alt icon"></i>
-                <h3>Exchange Items</h3>
-                <p>Manage item exchanges, track exchange requests, and handle returns.</p>
-                <a href="{{ route('exchange_items.index') }}" class="link-button">View Exchanges</a>
-            </div>
-
-            <div class="dashboard-item">
-                <i class="fas fa-credit-card icon"></i>
-                <h3>Payments</h3>
-                <p>Manage payment methods, track transactions, and handle payment issues.</p>
-                <a href="{{ route('payments.index') }}" class="link-button">View Payments</a>
-            </div>
-
-            <div class="dashboard-item">
-                <i class="fas fa-ticket-alt icon"></i>
-                <h3>Voucher</h3>
-                <p>Create and manage discount vouchers, promo codes, and special offers.</p>
-                <a href="{{ route('vouchers.index') }}" class="link-button">Manage Vouchers</a>
             </div>
 
             <div class="dashboard-item">

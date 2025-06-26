@@ -84,9 +84,9 @@
                                 <label for="category" class="form-label">Kategori</label>
                                 <select name="category" id="category" class="form-select">
                                     <option value="">Pilih Kategori</option>
-                                    <option value="Pakaian Wanita" {{ old('category', $product->category) == 'Pakaian Wanita' ? 'selected' : '' }}>Pakaian Wanita</option>
+                                    <option value="Pakaian & Aksesoris" {{ old('category', $product->category) == 'Pakaian & Aksesoris' ? 'selected' : '' }}>Pakaian & Aksesoris</option>
                                     <option value="Aksesoris Rumah" {{ old('category', $product->category) == 'Aksesoris Rumah' ? 'selected' : '' }}>Aksesoris Rumah</option>
-                                    <option value="Tas Wanita" {{ old('category', $product->category) == 'Tas Wanita' ? 'selected' : '' }}>Tas Wanita</option>
+                                    <option value="Tas & Dompet" {{ old('category', $product->category) == 'Tas & Dompet' ? 'selected' : '' }}>Tas & Dompet</option>
                                     <option value="Perlengkapan Rumah" {{ old('category', $product->category) == 'Perlengkapan Rumah' ? 'selected' : '' }}>Perlengkapan Rumah</option>
                                     {{-- Add more categories as needed --}}
                                 </select>
