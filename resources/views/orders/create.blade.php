@@ -46,120 +46,166 @@
                 <form action="{{ route('orders.store') }}" method="POST" id="orderForm">
                     @csrf
                     
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="order_date" class="form-label">Tanggal Pesanan <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="order_date" name="order_date" value="{{ old('order_date', date('Y-m-d')) }}" required>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="customer_id" class="form-label">Customer <span class="text-danger">*</span></label>
-                                <select class="form-select" id="customer_id" name="customer_id" required>
-                                    <option value="">Pilih Customer</option>
-                                    {{-- Assuming $customers is passed from the backend --}}
-                                    @foreach($customers as $customer)
-                                        <option value="{{ $customer->customer_id }}" {{ old('customer_id') == $customer->customer_id ? 'selected' : '' }}>
-                                            {{ $customer->customer_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="payment_id" class="form-label">Metode Pembayaran <span class="text-danger">*</span></label>
-                                <select class="form-select" id="payment_id" name="payment_id" required>
-                                    <option value="">Pilih Metode Pembayaran</option>
-                                    {{-- Assuming $payments is passed from the backend --}}
-                                    @foreach($payments as $payment)
-                                        <option value="{{ $payment->payment_id }}" {{ old('payment_id') == $payment->payment_id ? 'selected' : '' }}>
-                                            {{ $payment->payment_method }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="total_price" class="form-label">Total Harga <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <span class="input-group-text">Rp</span>
-                                    <input type="number" class="form-control" id="total_price" name="total_price" value="{{ old('total_price') }}" min="0" step="0.01" required readonly> {{-- Added readonly as it's calculated --}}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card mt-4">
+                    <!-- Order Information -->
+                    <div class="card mb-4">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">Pilih Produk</h5>
+                            <h5 class="card-title mb-0">Informasi Pesanan</h5>
                         </div>
                         <div class="card-body">
-                            <div id="productSection">
-                                <div class="row product-row mb-3">
-                                    <div class="col-md-5">
-                                        <label class="form-label">Produk</label>
-                                        <select class="form-select product-select" name="products[0][product_id]">
-                                            <option value="">Pilih Produk</option>
-                                            @foreach($products as $product)
-                                                <option value="{{ $product->product_id }}" data-price="{{ $product->price }}">
-                                                    {{ $product->product_name }} - Rp {{ number_format($product->price, 0, ',', '.') }}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="order_date" class="form-label">Tanggal Pesanan <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control" id="order_date" name="order_date" value="{{ old('order_date', date('Y-m-d')) }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="status" name="status" required>
+                                            <option value="">Pilih Status</option>
+                                            @foreach($statusOptions as $key => $value)
+                                                <option value="{{ $key }}" {{ old('status', 'UNPAID') == $key ? 'selected' : '' }}>
+                                                    {{ $value }}
                                                 </option>
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">Jumlah</label>
-                                        <input type="number" class="form-control quantity-input" name="products[0][quantity]" min="1" value="1">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="payment_method" class="form-label">Metode Pembayaran <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="payment_method" name="payment_method" required>
+                                            <option value="">Pilih Metode Pembayaran</option>
+                                            <option value="Cash" {{ old('payment_method') == 'Cash' ? 'selected' : '' }}>Cash</option>
+                                            <option value="Transfer Bank" {{ old('payment_method') == 'Transfer Bank' ? 'selected' : '' }}>Transfer Bank</option>
+                                            <option value="Credit Card" {{ old('payment_method') == 'Credit Card' ? 'selected' : '' }}>Credit Card</option>
+                                            <option value="E-Wallet" {{ old('payment_method') == 'E-Wallet' ? 'selected' : '' }}>E-Wallet</option>
+                                        </select>
                                     </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">Item Qty</label>
-                                        <input type="number" class="form-control item-quantity-input" name="products[0][item_quantity]" min="1" value="1">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">Subtotal</label>
-                                        <input type="text" class="form-control subtotal-display" readonly>
-                                    </div>
-                                    <div class="col-md-1">
-                                        <label class="form-label">&nbsp;</label>
-                                        <button type="button" class="btn btn-danger remove-product d-block" style="display: none;">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="status_info" class="form-label">Informasi Status</label>
+                                        <textarea class="form-control" id="status_info" name="status_info" rows="2" placeholder="Catatan tambahan tentang status pesanan">{{ old('status_info') }}</textarea>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <button type="button" class="btn btn-success" id="addProduct">
-                                <i class="fas fa-plus"></i> Tambah Produk
-                            </button>
                         </div>
                     </div>
 
-                    <div class="card mt-4">
+                    <!-- Merchant & Product Information -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Informasi Merchant & Produk</h5>
+                        </div>
                         <div class="card-body">
                             <div class="row">
-                                <div class="col-md-6 offset-md-6">
-                                    <table class="table table-borderless">
-                                        <tr>
-                                            <td>Subtotal Produk:</td>
-                                            <td class="text-end" id="calculatedSubtotal">Rp 0</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Pajak (10%):</td>
-                                            <td class="text-end" id="calculatedTax">Rp 0</td>
-                                        </tr>
-                                        <tr class="table-dark">
-                                            <td><strong>Total Keseluruhan:</strong></td>
-                                            <td class="text-end"><strong id="calculatedTotal">Rp 0</strong></td>
-                                        </tr>
-                                    </table>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="merchant_name" class="form-label">Nama Merchant <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="merchant_name" name="merchant_name" value="{{ old('merchant_name') }}" required>
+                                    </div>
                                 </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="product_name" class="form-label">Nama Produk <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="product_name" name="product_name" value="{{ old('product_name') }}" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="product_description" class="form-label">Deskripsi Produk</label>
+                                        <textarea class="form-control" id="product_description" name="product_description" rows="3" placeholder="Deskripsi produk">{{ old('product_description') }}</textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="product_image" class="form-label">URL Gambar Produk</label>
+                                        <input type="url" class="form-control" id="product_image" name="product_image" value="{{ old('product_image') }}" placeholder="https://example.com/image.jpg">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="quantity" class="form-label">Jumlah <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" id="quantity" name="quantity" value="{{ old('quantity', 1) }}" min="1" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="unit_price" class="form-label">Harga Satuan <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">Rp</span>
+                                            <input type="number" class="form-control" id="unit_price" name="unit_price" value="{{ old('unit_price') }}" min="0" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="total_price" class="form-label">Total Harga <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">Rp</span>
+                                            <input type="number" class="form-control" id="total_price" name="total_price" value="{{ old('total_price') }}" min="0" required readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recipient Information -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Informasi Penerima</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="nama_penerima" class="form-label">Nama Penerima <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="nama_penerima" name="nama_penerima" value="{{ old('nama_penerima') }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="nomor_hp" class="form-label">Nomor HP <span class="text-danger">*</span></label>
+                                        <input type="tel" class="form-control" id="nomor_hp" name="nomor_hp" value="{{ old('nomor_hp') }}" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="alamat_penerima" class="form-label">Alamat Penerima <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="alamat_penerima" name="alamat_penerima" rows="3" required>{{ old('alamat_penerima') }}</textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="kota_penerima" class="form-label">Kota <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="kota_penerima" name="kota_penerima" value="{{ old('kota_penerima') }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="provinsi" class="form-label">Provinsi <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="provinsi" name="provinsi" value="{{ old('provinsi') }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="kode_pos_penerima" class="form-label">Kode Pos <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="kode_pos_penerima" name="kode_pos_penerima" value="{{ old('kode_pos_penerima') }}" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="note_pengiriman" class="form-label">Catatan Pengiriman</label>
+                                <textarea class="form-control" id="note_pengiriman" name="note_pengiriman" rows="2" placeholder="Catatan khusus untuk pengiriman">{{ old('note_pengiriman') }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -175,107 +221,47 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let productIndex = 1;
-
-        // Add product row
-        document.getElementById('addProduct').addEventListener('click', function() {
-            const productSection = document.getElementById('productSection');
-            const firstProductRow = document.querySelector('.product-row');
-            const newRow = firstProductRow.cloneNode(true); // Clone the first row
-
-            // Reset values and update input names for the new row
-            newRow.querySelectorAll('select, input').forEach(input => {
-                if (input.name) {
-                    input.name = input.name.replace(/\[\d+\]/, `[${productIndex}]`);
-                }
-                // Reset select to default option and quantity inputs to 1
-                if (input.tagName === 'SELECT') {
-                    input.value = ''; // Reset select to "Pilih Produk"
-                } else if (input.type === 'number') {
-                    input.value = 1; // Reset quantity and item quantity to 1
-                } else if (input.classList.contains('subtotal-display')) {
-                    input.value = ''; // Clear subtotal display
-                }
-            });
-            
-            // Show remove button for cloned rows
-            newRow.querySelector('.remove-product').style.display = 'block';
-            
-            productSection.appendChild(newRow);
-            productIndex++;
-            
-            // Add event listeners to the newly added row
-            addEventListeners(newRow);
-            calculateTotal(); // Recalculate total after adding a new row
-        });
-
-        // Remove product row
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.remove-product')) {
-                e.target.closest('.product-row').remove();
-                calculateTotal();
-            }
-        });
-
-        // Add event listeners to existing and new rows
-        function addEventListeners(rowContainer = document) {
-            rowContainer.querySelectorAll('.product-select, .quantity-input, .item-quantity-input').forEach(input => {
-                input.addEventListener('change', function() {
-                    calculateRowSubtotal(this.closest('.product-row'));
-                    calculateTotal();
-                });
-                input.addEventListener('input', function() { // Also listen to 'input' for live updates
-                    calculateRowSubtotal(this.closest('.product-row'));
-                    calculateTotal();
-                });
-            });
-        }
-
-        // Calculate subtotal for a single row
-        function calculateRowSubtotal(row) {
-            const select = row.querySelector('.product-select');
-            const quantity = parseFloat(row.querySelector('.quantity-input').value) || 0;
-            const itemQuantity = parseFloat(row.querySelector('.item-quantity-input').value) || 0;
-            const subtotalDisplay = row.querySelector('.subtotal-display');
-            
-            if (select.value) {
-                const price = parseFloat(select.options[select.selectedIndex].dataset.price) || 0;
-                const subtotal = price * quantity * itemQuantity;
-                subtotalDisplay.value = 'Rp ' + new Intl.NumberFormat('id-ID').format(subtotal);
-            } else {
-                subtotalDisplay.value = '';
-            }
-        }
-
-        // Calculate total
+        // Calculate total price when quantity or unit price changes
         function calculateTotal() {
-            let subtotal = 0;
+            const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+            const unitPrice = parseFloat(document.getElementById('unit_price').value) || 0;
+            const total = quantity * unitPrice;
             
-            document.querySelectorAll('.product-row').forEach(row => {
-                const select = row.querySelector('.product-select');
-                const quantity = parseFloat(row.querySelector('.quantity-input').value) || 0;
-                const itemQuantity = parseFloat(row.querySelector('.item-quantity-input').value) || 0;
-                
-                if (select.value) {
-                    const price = parseFloat(select.options[select.selectedIndex].dataset.price) || 0;
-                    subtotal += price * quantity * itemQuantity;
+            document.getElementById('total_price').value = total;
+        }
+
+        // Add event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            const quantityInput = document.getElementById('quantity');
+            const unitPriceInput = document.getElementById('unit_price');
+            
+            quantityInput.addEventListener('input', calculateTotal);
+            unitPriceInput.addEventListener('input', calculateTotal);
+            
+            // Calculate initial total
+            calculateTotal();
+        });
+
+        // Form validation
+        document.getElementById('orderForm').addEventListener('submit', function(e) {
+            const requiredFields = ['order_date', 'status', 'merchant_name', 'product_name', 'quantity', 'unit_price', 'nama_penerima', 'nomor_hp', 'alamat_penerima', 'kota_penerima', 'provinsi', 'kode_pos_penerima', 'payment_method'];
+            
+            let isValid = true;
+            
+            requiredFields.forEach(function(fieldName) {
+                const field = document.querySelector(`[name="${fieldName}"]`);
+                if (field && !field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else if (field) {
+                    field.classList.remove('is-invalid');
                 }
             });
             
-            const taxRate = 0.1;
-            const tax = subtotal * taxRate;
-            const total = subtotal + tax;
-            
-            document.getElementById('calculatedSubtotal').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(subtotal);
-            document.getElementById('calculatedTax').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(tax);
-            document.getElementById('calculatedTotal').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(total);
-            document.getElementById('total_price').value = total.toFixed(2); // Set the hidden input for total_price, format to 2 decimal places
-        }
-
-        // Initialize event listeners and calculate total on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            addEventListeners();
-            calculateTotal(); // Calculate initial total
+            if (!isValid) {
+                e.preventDefault();
+                alert('Mohon lengkapi semua field yang wajib diisi!');
+            }
         });
     </script>
 </body>

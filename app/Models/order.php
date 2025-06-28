@@ -15,38 +15,38 @@ class Order extends Model
 
     protected $fillable = [
         'order_id',
-        'customer_id',
-        'payment_id',
         'order_date',
         'total_price',
-        'subtotal',
-        'tax_amount',
         'status',
+        'merchant_name',
+        'product_name',
+        'product_description',
+        'product_image',
+        'quantity',
+        'unit_price',
         'status_info',
+        'nama_penerima',
+        'nomor_hp',
+        'alamat_penerima',
+        'kota_penerima',
+        'kode_pos_penerima',
+        'provinsi',
+        'note_pengiriman',
+        'payment_method',
     ];
 
-    // Define the relationship with Customer
-    public function customer()
-    {
-        return $this->belongsTo(Customer::class, 'customer_id', 'customer_id');
-    }
-
-    // Define the relationship with Payment
-    public function payment()
-    {
-        return $this->belongsTo(Payment::class, 'payment_id', 'payment_id');
-    }
-
-    // Define the relationship with DetailOrder
-    public function detailOrders()
-    {
-        return $this->hasMany(DetailOrder::class, 'order_id', 'order_id');
-    }
+    protected $casts = [
+        'order_date' => 'datetime',
+        'total_price' => 'integer',
+        'quantity' => 'integer',
+        'unit_price' => 'integer',
+    ];
 
     // Method to get status options
     public static function getStatusOptions()
     {
         return [
+            'UNPAID' => 'Unpaid',
             'PACKED' => 'Packed',
             'SENT' => 'Sent',
             'DONE' => 'Done',
@@ -54,13 +54,13 @@ class Order extends Model
         ];
     }
 
-    // Accessor for human-readable status label (optional, but good for display)
+    // Accessor for human-readable status label
     public function getStatusLabelAttribute()
     {
         return self::getStatusOptions()[$this->status] ?? $this->status;
     }
 
-    // Mutator for default status_info if not provided
+    // Accessor for default status_info if not provided
     public function getStatusInfoAttribute($value)
     {
         if ($value) {
@@ -68,6 +68,8 @@ class Order extends Model
         }
 
         switch ($this->status) {
+            case 'UNPAID':
+                return 'Pesanan belum dibayar.';
             case 'PACKED':
                 return 'Pesanan sedang disiapkan dan dikemas.';
             case 'SENT':
@@ -79,5 +81,17 @@ class Order extends Model
             default:
                 return 'Informasi status tidak tersedia.';
         }
+    }
+
+    // Helper method to get full recipient address
+    public function getFullAddressAttribute()
+    {
+        return "{$this->alamat_penerima}, {$this->kota_penerima}, {$this->provinsi} {$this->kode_pos_penerima}";
+    }
+
+    // Helper method to calculate total from unit price and quantity
+    public function calculateTotal()
+    {
+        return $this->unit_price * $this->quantity;
     }
 }

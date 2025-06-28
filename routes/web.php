@@ -88,15 +88,18 @@ Route::middleware('auth')->group(function () {
         Route::put('/products/{id}', [ProductController::class, 'update'])->name('products.update');
         Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
        
-        // ... (Route-route Admin lainnya tetap sama)
-              Route::get('/orders', [App\Http\Controllers\OrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/create', [App\Http\Controllers\OrderController::class, 'create'])->name('orders.create');
-    Route::post('/orders', [App\Http\Controllers\OrderController::class, 'store'])->name('orders.store');
-    Route::get('/orders/{order_id}', [App\Http\Controllers\OrderController::class, 'show'])->name('orders.show');
-    Route::get('/orders/{order_id}/edit', [App\Http\Controllers\OrderController::class, 'edit'])->name('orders.edit');
-    Route::put('/orders/{order_id}', [App\Http\Controllers\OrderController::class, 'update'])->name('orders.update');
-    Route::delete('/orders/{order_id}', [App\Http\Controllers\OrderController::class, 'destroy'])->name('orders.destroy');
-    
+        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('admin/orders/create', [OrderController::class, 'create'])->name('orders.create');
+        Route::post('admin/orders', [OrderController::class, 'store'])->name('orders.store');
+        Route::get('admin/orders/{id}/details', [OrderController::class, 'show'])->name('orders.show');
+        Route::get('admin/orders/{id}/edit', [OrderController::class, 'edit'])->name('orders.edit');
+        Route::put('admin/orders/{id}', [OrderController::class, 'update'])->name('orders.update');
+        Route::delete('admin/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
+//  /admin/orders/ord1/edit
+        Route::get('admin/{id}/details', [OrderController::class, 'getOrderDetails'])->name('details');
+        Route::post('admin/bulk-update-status', [OrderController::class, 'bulkUpdateStatus'])->name('bulk-update-status');
+        Route::patch('admin/{id}/edit', [OrderController::class, 'update'])->name('update-status');
+        
         // Seller Routes
         Route::get('/sellers', [SellerController::class, 'index'])->name('sellers.index');
         Route::get('/sellers/create', [SellerController::class, 'create'])->name('sellers.create');

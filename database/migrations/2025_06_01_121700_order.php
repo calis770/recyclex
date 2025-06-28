@@ -24,7 +24,7 @@ return new class extends Migration
             $table->integer('unit_price');
             $table->text('status_info')->nullable();
             
-            // Kolom tambahan yang diminta
+            // Kolom tambahan 
             $table->string('nama_penerima');
             $table->string('nomor_hp');
             $table->text('alamat_penerima');

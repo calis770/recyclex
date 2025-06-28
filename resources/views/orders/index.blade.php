@@ -13,14 +13,14 @@
             font-size: 0.8rem;
             font-weight: bold;
             padding: 0.4rem 0.8rem;
-            border-radius: 0.5rem; /* Lebih kecil untuk select */
-            border: 1px solid transparent; /* default border */
-            width: fit-content; /* Sesuaikan lebar dengan konten */
+            border-radius: 0.5rem;
+            border: 1px solid transparent;
+            width: fit-content;
         }
-        .status-select.PACKED { background-color: #17a2b8; color: #fff; border-color: #138496; } /* info */
-        .status-select.SENT { background-color: #6f42c1; color: #fff; border-color: #5d35a5; } /* purple */
-        .status-select.DONE { background-color: #28a745; color: #fff; border-color: #218838; } /* success */
-        .status-select.CANCELLED { background-color: #dc3545; color: #fff; border-color: #c82333; } /* danger */
+        .status-select.PACKED { background-color: #17a2b8; color: #fff; border-color: #138496; }
+        .status-select.SENT { background-color: #6f42c1; color: #fff; border-color: #5d35a5; }
+        .status-select.DONE { background-color: #28a745; color: #fff; border-color: #218838; }
+        .status-select.CANCELLED { background-color: #dc3545; color: #fff; border-color: #c82333; }
         
         .btn-group .btn {
             padding: 0.25rem 0.5rem;
@@ -45,9 +45,9 @@
             border-radius: 0.375rem;
             margin-bottom: 1rem;
             border: 1px solid #dee2e6;
-            display: flex; /* Flexbox for alignment */
-            align-items: center; /* Center items vertically */
-            gap: 1rem; /* Space between items */
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
         .alert-fixed {
             position: fixed;
@@ -88,42 +88,47 @@
             </div>
         @endif
 
-        <div class="filter-section mt-4 mx-4"> {{-- Added mx-4 for horizontal margin --}}
-            <div class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label for="statusFilter" class="form-label">Filter Status</label>
-                    <select class="form-select" id="statusFilter">
-                        <option value="">Semua Status</option>
-                        @foreach($statusOptions as $key => $label)
-                            <option value="{{ $key }}" {{ request('status') == $key ? 'selected' : '' }}>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label for="searchInput" class="form-label">Cari Pesanan</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control" id="searchInput" 
-                                value="{{ request('search') }}" placeholder="Cari berdasarkan ID pesanan atau nama customer">
+        <div class="filter-section mt-4 mx-4">
+            <form method="GET" action="{{ route('orders.index') }}" id="filterForm">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="statusFilter" class="form-label">Filter Status</label>
+                        <select class="form-select" id="statusFilter" name="status" onchange="document.getElementById('filterForm').submit()">
+                            <option value="">Semua Status</option>
+                            @foreach($statusOptions as $key => $label)
+                                <option value="{{ $key }}" {{ request('status') == $key ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="searchInput" class="form-label">Cari Pesanan</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="searchInput" name="search"
+                                    value="{{ request('search') }}" placeholder="Cari berdasarkan ID pesanan atau nama customer">
+                            <button type="submit" class="btn btn-outline-secondary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3 d-flex justify-content-end">
+                        <a href="{{ route('orders.create') }}" class="btn btn-success"> 
+                            <i class="fas fa-plus"></i> Tambah Pesanan
+                        </a>
                     </div>
                 </div>
-                <div class="col-md-3 d-flex justify-content-end"> {{-- Align button to the right --}}
-                    <a href="{{ route('orders.create') }}" class="btn btn-success"> 
-                        <i class="fas fa-plus"></i> Tambah Pesanan
-                    </a>
-                </div>
-            </div>
+            </form>
         </div>
 
-        <div class="bulk-actions mx-4" id="bulkActions" style="display: none;"> {{-- Added mx-4 --}}
-            <div class="me-auto"> {{-- Pushed to the left --}}
+        <div class="bulk-actions mx-4" id="bulkActions" style="display: none;">
+            <div class="me-auto">
                 <span class="text-muted">
                     <span id="selectedCount">0</span> pesanan dipilih
                 </span>
             </div>
-            <div class="col-auto"> {{-- col-auto to keep content grouped --}}
+            <div class="col-auto">
                 <select class="form-select form-select-sm" id="bulkStatusSelect">
                     <option value="">Ubah Status</option>
                     @foreach($statusOptions as $key => $label)
@@ -131,21 +136,21 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-auto"> {{-- col-auto to keep content grouped --}}
+            <div class="col-auto">
                 <button id="bulkUpdateBtn" class="btn btn-primary btn-sm">
                     <i class="fas fa-sync"></i> Terapkan
                 </button>
             </div>
         </div>
 
-        <div class="card mx-4"> {{-- Added mx-4 --}}
+        <div class="card mx-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title mb-0">Daftar Pesanan</h3> {{-- Changed text for clarity --}}
+                <h3 class="card-title mb-0">Daftar Pesanan</h3>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-bordered table-hover mb-0"> {{-- Removed bottom margin if not needed --}}
-                        <thead class="table-light"> {{-- Using table-light for header background --}}
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-light">
                             <tr>
                                 <th style="width: 1%;">
                                     <input type="checkbox" id="selectAll" class="form-check-input">
@@ -167,13 +172,12 @@
                                 <td>
                                     <div class="fw-bold">{{ $order->order_id }}</div>
                                 </td>
-                                <td>{{ $order->customer->customer_name ?? 'N/A' }}</td>
-                                <td>{{ \Carbon\Carbon::parse($order->order_date)->format('d/m/Y H:i') }}</td> {{-- Added time --}}
+                                <td>{{ $order->nama_penerima ?? 'N/A' }}</td>
+                                <td>{{ \Carbon\Carbon::parse($order->order_date)->format('d/m/Y H:i') }}</td>
                                 <td>
                                     <div class="fw-bold">Rp {{ number_format($order->total_price, 0, ',', '.') }}</div>
                                 </td>
                                 <td>
-                                    {{-- Status dropdown with dynamic styling --}}
                                     <select class="form-select form-select-sm status-select {{ $order->status }}" 
                                             data-order-id="{{ $order->order_id }}" 
                                             data-original-status="{{ $order->status }}">
@@ -183,20 +187,19 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                    {{-- Tooltip for status info --}}
-                                    <small class="d-block text-muted mt-1" 
-                                           data-bs-toggle="tooltip" data-bs-placement="top" 
-                                           title="{{ $order->status_info }}">
-                                           {{ Str::limit($order->status_info, 30) }}
-                                    </small>
+                                    @if($order->status_info)
+                                        <small class="d-block text-muted mt-1" 
+                                               data-bs-toggle="tooltip" data-bs-placement="top" 
+                                               title="{{ $order->status_info }}">
+                                               {{ Str::limit($order->status_info, 30) }}
+                                        </small>
+                                    @endif
                                 </td>
                                 <td>
-                                    <div class="d-flex justify-content-center"> {{-- Centered action buttons --}}
-                                        <button class="btn btn-info btn-sm me-1"
-                                                title="Lihat Detail"
-                                                onclick="viewOrder('{{ $order->order_id }}')">
+                                    <div class="d-flex justify-content-center">
+                                        <a href="{{ route('orders.show', $order->order_id) }}" class="btn btn-primary btn-sm me-1" title="Detail">
                                             <i class="fas fa-eye"></i>
-                                        </button>
+                                        </a>
                                         <a href="{{ route('orders.edit', $order->order_id) }}" class="btn btn-warning btn-sm me-1" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -224,6 +227,7 @@
         </div>
     </div>
 
+    <!-- Status Update Modal -->
     <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -266,7 +270,7 @@
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         
         let currentOrderId = null;
-        const statusModalBs = new bootstrap.Modal(document.getElementById('statusModal')); // Renamed to avoid conflict
+        const statusModalBs = new bootstrap.Modal(document.getElementById('statusModal'));
 
         // Initialize tooltips
         document.addEventListener('DOMContentLoaded', function() {
@@ -274,27 +278,27 @@
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
+
+            // Initialize bulk actions
+            updateBulkActions();
         });
 
-        // --- Individual Status Update Logic ---
+        // Individual Status Update Logic
         document.querySelectorAll('.status-select').forEach(select => {
             select.addEventListener('change', function() {
                 const orderId = this.dataset.orderId;
                 const newStatus = this.value;
                 const originalStatus = this.dataset.originalStatus;
                 
-                // Only show modal if status actually changed
                 if (newStatus !== originalStatus) {
                     currentOrderId = orderId;
                     document.getElementById('modalOrderId').textContent = `(#${orderId})`;
                     document.getElementById('modalStatus').value = newStatus;
-                    // Reset status info field when modal opens for a new selection
                     document.getElementById('modalStatusInfo').value = ''; 
                     statusModalBs.show();
                 } else {
-                    // If the user selected the current status again, just remove any info
-                    // This might not be strictly necessary with `location.reload()` but good practice
-                    document.getElementById('modalStatusInfo').value = '';
+                    // Reset to original if same status selected
+                    this.value = originalStatus;
                 }
             });
         });
@@ -303,7 +307,6 @@
             const status = document.getElementById('modalStatus').value;
             const statusInfo = document.getElementById('modalStatusInfo').value;
             
-            // Validate that an orderId is set
             if (!currentOrderId) {
                 showAlert('Tidak ada pesanan yang dipilih.', 'error');
                 closeStatusModal();
@@ -314,11 +317,17 @@
         }
 
         function updateOrderStatus(orderId, status, statusInfo = '') {
-            fetch(`/admin/orders/${orderId}/update-status`, { // CORRECTED ROUTE
-                method: 'PATCH', // CORRECTED METHOD
+            const submitBtn = document.querySelector('#statusModal .btn-primary');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            submitBtn.disabled = true;
+
+            fetch(`/admin/orders/${orderId}`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({
                     status: status,
@@ -326,32 +335,42 @@
                 })
             })
             .then(response => {
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error(`Server mengembalikan ${contentType} bukan JSON. Status: ${response.status}`);
+                }
+                
                 if (!response.ok) {
-                    // If server response is not OK (e.g., 400, 500), parse and throw error
-                    return response.json().then(err => { throw err; });
+                    return response.json().then(err => { 
+                        throw new Error(err.message || `HTTP Error: ${response.status}`);
+                    });
                 }
                 return response.json();
             })
             .then(data => {
                 if (data.success) {
                     closeStatusModal();
-                    showAlert(data.message, 'success');
-                    // Reload the page to reflect all updates, including status info and badge styling
+                    showAlert(data.message || 'Status berhasil diupdate', 'success');
                     location.reload(); 
                 } else {
-                    showAlert('Gagal mengupdate status: ' + (data.message || 'Terjadi kesalahan tidak dikenal.'), 'error');
+                    throw new Error(data.message || 'Update gagal');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Error details:', error);
+                
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                
                 let errorMessage = 'Terjadi kesalahan saat mengupdate status.';
-                if (error.errors) { // Handle Laravel validation errors
-                    errorMessage += '\n' + Object.values(error.errors).flat().join('\n');
+                if (error.message.includes('application/json')) {
+                    errorMessage = 'Server error: Kemungkinan ada masalah dengan route atau controller.';
                 } else if (error.message) {
-                    errorMessage = 'Error: ' + error.message;
+                    errorMessage = error.message;
                 }
+                
                 showAlert(errorMessage, 'error');
-                // Importantly, reset the select value to its original state if AJAX fails
+                
                 const selectElement = document.querySelector(`[data-order-id="${orderId}"]`);
                 if (selectElement) {
                     selectElement.value = selectElement.dataset.originalStatus;
@@ -361,107 +380,84 @@
 
         function closeStatusModal() {
             statusModalBs.hide();
+            currentOrderId = null;
+            
+            // Reset form
+            document.getElementById('modalStatus').value = '';
             document.getElementById('modalStatusInfo').value = '';
-            // Reset the specific select element that opened the modal to its original status
-            if (currentOrderId) {
-                const selectElement = document.querySelector(`[data-order-id="${currentOrderId}"]`);
-                if (selectElement) {
-                    selectElement.value = selectElement.dataset.originalStatus;
-                }
-            }
-            currentOrderId = null; // Clear current order ID
         }
 
-        // --- Alert Function ---
-        function showAlert(message, type = 'info') {
-            const alertContainer = document.createElement('div');
-            alertContainer.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show alert-fixed`;
-            alertContainer.innerHTML = `
-                <div>${message}</div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
-            document.body.appendChild(alertContainer);
-            
-            // Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                const bsAlert = new bootstrap.Alert(alertContainer);
-                bsAlert.close();
-            }, 5000); // 5000 milliseconds = 5 seconds
-        }
-
-        // --- Search and Filter Functionality (Optimized) ---
-        function applyFilters() {
-            const url = new URL(window.location.origin + window.location.pathname);
-            const status = document.getElementById('statusFilter').value;
-            const search = document.getElementById('searchInput').value;
-
-            if (status) {
-                url.searchParams.set('status', status);
-            }
-            if (search) {
-                url.searchParams.set('search', search);
-            }
-            url.searchParams.delete('page'); // Always reset pagination on filter change
-            window.location.href = url.toString(); // Use href to navigate
-        }
-
-        document.getElementById('statusFilter').addEventListener('change', applyFilters);
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                applyFilters();
-            }
-        });
-
-        // --- Bulk Operations Logic ---
-        document.getElementById('selectAll').addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('.order-checkbox');
-            checkboxes.forEach(cb => cb.checked = this.checked);
-            updateBulkActions();
-        });
-
-        document.querySelectorAll('.order-checkbox').forEach(cb => {
-            cb.addEventListener('change', updateBulkActions);
-        });
-
+        // Bulk Update Functions
         function updateBulkActions() {
-            const selected = document.querySelectorAll('.order-checkbox:checked');
+            const checkboxes = document.querySelectorAll('.order-checkbox:checked');
             const bulkActions = document.getElementById('bulkActions');
-            const selectedCountSpan = document.getElementById('selectedCount');
+            const selectedCount = document.getElementById('selectedCount');
             
-            selectedCountSpan.textContent = selected.length;
-            if (selected.length > 0) {
-                bulkActions.style.display = 'flex'; // Use flex to maintain layout
+            selectedCount.textContent = checkboxes.length;
+            
+            if (checkboxes.length > 0) {
+                bulkActions.style.display = 'flex';
             } else {
                 bulkActions.style.display = 'none';
             }
         }
 
+        // Select All functionality
+        document.getElementById('selectAll').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.order-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActions();
+        });
+
+        // Individual checkbox change
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('order-checkbox')) {
+                updateBulkActions();
+                
+                // Update select all checkbox
+                const allCheckboxes = document.querySelectorAll('.order-checkbox');
+                const checkedCheckboxes = document.querySelectorAll('.order-checkbox:checked');
+                const selectAllCheckbox = document.getElementById('selectAll');
+                
+                selectAllCheckbox.checked = allCheckboxes.length === checkedCheckboxes.length;
+                selectAllCheckbox.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+            }
+        });
+
+        // Bulk Update Button
         document.getElementById('bulkUpdateBtn').addEventListener('click', function() {
-            const selectedOrders = Array.from(document.querySelectorAll('.order-checkbox:checked'))
-                .map(cb => cb.value);
+            const selectedOrders = Array.from(document.querySelectorAll('.order-checkbox:checked')).map(cb => cb.value);
             const newStatus = document.getElementById('bulkStatusSelect').value;
             
             if (selectedOrders.length === 0) {
-                showAlert('Pilih setidaknya satu pesanan untuk diupdate.', 'error');
+                showAlert('Pilih minimal satu pesanan untuk diupdate.', 'warning');
                 return;
             }
             
             if (!newStatus) {
-                showAlert('Pilih status baru untuk pembaruan massal.', 'error');
+                showAlert('Pilih status yang akan diterapkan.', 'warning');
                 return;
             }
             
-            if (confirm(`Yakin ingin mengubah status ${selectedOrders.length} pesanan menjadi "${document.getElementById('bulkStatusSelect').options[document.getElementById('bulkStatusSelect').selectedIndex].text}"?`)) {
+            if (confirm(`Apakah Anda yakin ingin mengubah status ${selectedOrders.length} pesanan ke ${newStatus}?`)) {
                 bulkUpdateStatus(selectedOrders, newStatus);
             }
         });
 
         function bulkUpdateStatus(orderIds, status) {
-            fetch('/admin/orders/bulk-update-status', { // CORRECTED ROUTE
+            const submitBtn = document.getElementById('bulkUpdateBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            submitBtn.disabled = true;
+
+            fetch('/admin/orders/bulk-update-status', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({
                     order_ids: orderIds,
@@ -469,47 +465,63 @@
                 })
             })
             .then(response => {
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error(`Server mengembalikan ${contentType} bukan JSON. Status: ${response.status}`);
+                }
+                
                 if (!response.ok) {
-                    return response.json().then(err => { throw err; });
+                    return response.json().then(err => { 
+                        throw new Error(err.message || `HTTP Error: ${response.status}`);
+                    });
                 }
                 return response.json();
             })
             .then(data => {
                 if (data.success) {
-                    showAlert(data.message, 'success');
-                    location.reload(); // Reload to reflect changes
+                    showAlert(data.message || 'Bulk update berhasil', 'success');
+                    location.reload();
                 } else {
-                    showAlert('Gagal melakukan bulk update: ' + (data.message || 'Terjadi kesalahan tidak dikenal.'), 'error');
+                    throw new Error(data.message || 'Bulk update gagal');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Bulk update error:', error);
+                
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                
                 let errorMessage = 'Terjadi kesalahan saat melakukan bulk update.';
-                if (error.errors) {
-                    errorMessage += '\n' + Object.values(error.errors).flat().join('\n');
+                if (error.message.includes('application/json')) {
+                    errorMessage = 'Server error: Cek route dan controller untuk bulk update.';
                 } else if (error.message) {
-                    errorMessage = 'Error: ' + error.message;
+                    errorMessage = error.message;
                 }
+                
                 showAlert(errorMessage, 'error');
             });
         }
 
-        // --- Action Buttons ---
-        function viewOrder(orderId) {
-            window.location.href = `/admin/orders/${orderId}`; 
-        }
-
+        // Delete Function
         function deleteOrder(orderId) {
             if (confirm('Apakah Anda yakin ingin menghapus pesanan ini? Aksi ini tidak bisa dibatalkan.')) {
                 fetch(`/admin/orders/${orderId}`, {
                     method: 'DELETE',
                     headers: {
-                        'X-CSRF-TOKEN': csrfToken
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
                     }
                 })
                 .then(response => {
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error(`Server mengembalikan ${contentType} bukan JSON. Status: ${response.status}`);
+                    }
+                    
                     if (!response.ok) {
-                        return response.json().then(err => { throw err; });
+                        return response.json().then(err => { 
+                            throw new Error(err.message || `HTTP Error: ${response.status}`);
+                        });
                     }
                     return response.json();
                 })
@@ -518,22 +530,45 @@
                         showAlert('Pesanan berhasil dihapus.', 'success');
                         location.reload();
                     } else {
-                        showAlert('Gagal menghapus pesanan: ' + (data.message || 'Terjadi kesalahan tidak dikenal.'), 'error');
+                        throw new Error(data.message || 'Delete gagal');
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('Delete error:', error);
                     let errorMessage = 'Terjadi kesalahan saat menghapus pesanan.';
                     if (error.message) {
-                        errorMessage = 'Error: ' + error.message;
+                        errorMessage = error.message;
                     }
                     showAlert(errorMessage, 'error');
                 });
             }
         }
 
-        // Initial update of bulk actions display on page load
-        document.addEventListener('DOMContentLoaded', updateBulkActions);
+        // Alert Function
+        function showAlert(message, type = 'info') {
+            const alertClass = type === 'error' ? 'alert-danger' : `alert-${type}`;
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show alert-fixed" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            // Remove existing alerts
+            document.querySelectorAll('.alert-fixed').forEach(alert => alert.remove());
+            
+            // Add new alert
+            document.body.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                const alert = document.querySelector('.alert-fixed');
+                if (alert) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
+            }, 5000);
+        }
     </script>
 </body>
 </html>

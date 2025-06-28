@@ -14,6 +14,7 @@
             padding: 0.5rem 1rem;
             border-radius: 1rem;
         }
+        .status-UNPAID { background-color: #ffc107; color: #000; }
         .status-PACKED { background-color: #17a2b8; color: #fff; }
         .status-SENT { background-color: #6f42c1; color: #fff; }
         .status-DONE { background-color: #28a745; color: #fff; }
@@ -51,6 +52,13 @@
         .btn-group .btn {
             padding: 0.5rem 1rem;
             margin: 0 0.2rem;
+        }
+
+        .product-card {
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
         }
     </style>
 </head>
@@ -102,7 +110,7 @@
                             <strong>ID Pesanan:</strong> {{ $order->order_id }}
                         </div>
                         <div class="detail-row">
-                            <strong>Tanggal Pesanan:</strong> {{ $order->order_date->format('d/m/Y H:i:s') }}
+                            <strong>Tanggal Pesanan:</strong> {{ \Carbon\Carbon::parse($order->order_date)->format('d/m/Y H:i:s') }}
                         </div>
                         <div class="detail-row">
                             <strong>Status:</strong> 
@@ -117,13 +125,11 @@
                         </div>
                         @endif
                         <div class="detail-row">
-                            <strong>Metode Pembayaran:</strong> {{ $order->payment->payment_method ?? 'N/A' }}
+                            <strong>Metode Pembayaran:</strong> {{ $order->payment_method ?? 'N/A' }}
                         </div>
-                        @if($order->payment && $order->payment->description)
                         <div class="detail-row">
-                            <strong>Deskripsi Pembayaran:</strong> {{ $order->payment->description }}
+                            <strong>Merchant:</strong> {{ $order->merchant_name ?? 'N/A' }}
                         </div>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -132,74 +138,82 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-user"></i> Informasi Customer</h5>
+                        <h5><i class="fas fa-user"></i> Informasi Penerima</h5>
                     </div>
                     <div class="card-body">
-                        @if($order->customer)
                         <div class="detail-row">
-                            <strong>Nama:</strong> {{ $order->customer->customer_name }}
+                            <strong>Nama Penerima:</strong> {{ $order->nama_penerima ?? 'N/A' }}
                         </div>
                         <div class="detail-row">
-                            <strong>Email:</strong> {{ $order->customer->email ?? 'N/A' }}
+                            <strong>Nomor HP:</strong> {{ $order->nomor_hp ?? 'N/A' }}
                         </div>
                         <div class="detail-row">
-                            <strong>Telepon:</strong> {{ $order->customer->phone ?? 'N/A' }}
+                            <strong>Alamat:</strong> {{ $order->alamat_penerima ?? 'N/A' }}
                         </div>
                         <div class="detail-row">
-                            <strong>Alamat:</strong> {{ $order->customer->address ?? 'N/A' }}
+                            <strong>Kota:</strong> {{ $order->kota_penerima ?? 'N/A' }}
                         </div>
-                        @else
-                        <div class="text-muted">Data customer tidak tersedia</div>
+                        <div class="detail-row">
+                            <strong>Kode Pos:</strong> {{ $order->kode_pos_penerima ?? 'N/A' }}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Provinsi:</strong> {{ $order->provinsi ?? 'N/A' }}
+                        </div>
+                        @if($order->note_pengiriman)
+                        <div class="detail-row">
+                            <strong>Catatan Pengiriman:</strong><br>
+                            <span class="text-muted">{{ $order->note_pengiriman }}</span>
+                        </div>
                         @endif
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Order Details/Products -->
+        <!-- Product Information -->
         <div class="card mt-4">
             <div class="card-header">
                 <h5><i class="fas fa-shopping-cart"></i> Detail Produk</h5>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="thead-light">
-                            <tr>
-                                <th>Gambar</th>
-                                <th>Nama Produk</th>
-                                <th>Harga Satuan</th>
-                                <th>Jumlah</th>
-                                <th>Item Quantity</th>
-                                <th>Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($order->detailOrders as $detail)
-                            <tr>
-                                <td>
-                                    @if($detail->product && $detail->product->image_product)
-                                        <img src="{{ asset('storage/' . $detail->product->image_product) }}"
-                                             alt="{{ $detail->product->product_name }}"
-                                             class="img-thumbnail product-image">
-                                    @else
-                                        <span class="text-muted">No Image</span>
+                <div class="product-card">
+                    <div class="row">
+                        <div class="col-md-2">
+                            @if($order->product_image)
+                                <img src="{{ $order->product_image }}"
+                                     alt="{{ $order->product_name }}"
+                                     class="img-thumbnail product-image w-100">
+                            @else
+                                <div class="bg-light d-flex align-items-center justify-content-center product-image w-100">
+                                    <span class="text-muted">No Image</span>
+                                </div>
+                            @endif
+                        </div>
+                        <div class="col-md-10">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="mb-2">{{ $order->product_name ?? 'Produk tidak ditemukan' }}</h6>
+                                    @if($order->product_description)
+                                        <p class="text-muted mb-3">{{ $order->product_description }}</p>
                                     @endif
-                                </td>
-                                <td>
-                                    <strong>{{ $detail->product->product_name ?? 'Produk tidak ditemukan' }}</strong>
-                                    @if($detail->product && $detail->product->variasi)
-                                        <br><small class="text-muted">{{ $detail->product->variasi }}</small>
-                                    @endif
-                                </td>
-                                <td>Rp {{ number_format($detail->product->price ?? 0, 0, ',', '.') }}</td>
-                                <td>{{ $detail->quantity }}</td>
-                                <td>{{ $detail->item_quantity }}</td>
-                                <td>Rp {{ number_format(($detail->product->price ?? 0) * $detail->quantity, 0, ',', '.') }}</td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <div class="col-6"><strong>Harga Satuan:</strong></div>
+                                        <div class="col-6">Rp {{ number_format($order->unit_price ?? 0, 0, ',', '.') }}</div>
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col-6"><strong>Jumlah:</strong></div>
+                                        <div class="col-6">{{ $order->quantity ?? 0 }}</div>
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col-6"><strong>Subtotal:</strong></div>
+                                        <div class="col-6">Rp {{ number_format(($order->unit_price ?? 0) * ($order->quantity ?? 0), 0, ',', '.') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Order Summary -->
@@ -208,18 +222,12 @@
                         <div class="total-section">
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Subtotal:</span>
-                                <span>Rp {{ number_format($order->subtotal, 0, ',', '.') }}</span>
+                                <span>Rp {{ number_format(($order->unit_price ?? 0) * ($order->quantity ?? 0), 0, ',', '.') }}</span>
                             </div>
-                            @if($order->tax_amount > 0)
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Pajak:</span>
-                                <span>Rp {{ number_format($order->tax_amount, 0, ',', '.') }}</span>
-                            </div>
-                            @endif
                             <hr>
                             <div class="d-flex justify-content-between">
                                 <strong>Total:</strong>
-                                <strong>Rp {{ number_format($order->total_price, 0, ',', '.') }}</strong>
+                                <strong>Rp {{ number_format($order->total_price ?? 0, 0, ',', '.') }}</strong>
                             </div>
                         </div>
                     </div>
@@ -245,6 +253,7 @@
                         <div class="mb-3">
                             <label for="new_status" class="form-label">Status Baru</label>
                             <select class="form-select" id="new_status" name="status" required>
+                                <option value="UNPAID" {{ $order->status == 'UNPAID' ? 'selected' : '' }}>Belum Bayar</option>
                                 <option value="PACKED" {{ $order->status == 'PACKED' ? 'selected' : '' }}>Dikemas</option>
                                 <option value="SENT" {{ $order->status == 'SENT' ? 'selected' : '' }}>Dikirim</option>
                                 <option value="DONE" {{ $order->status == 'DONE' ? 'selected' : '' }}>Selesai</option>
@@ -283,7 +292,7 @@
                         
                         const formData = new FormData(statusForm);
                         
-                        fetch(`{{ url('orders') }}/${orderId}/status`, {
+                        fetch(`{{ url('orders') }}/${orderId}`, {
                             method: 'PUT',
                             headers: {
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -298,7 +307,38 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                location.reload();
+                                statusModal.hide();
+                                
+                                // Show success message
+                                const alertDiv = document.createElement('div');
+                                alertDiv.className = 'alert alert-success alert-dismissible fade show mt-3';
+                                alertDiv.innerHTML = `
+                                    ${data.message}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                `;
+                                document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.d-flex.justify-content-between'));
+                                
+                                // Update status badge
+                                const statusBadge = document.querySelector('.status-badge');
+                                statusBadge.className = `status-badge status-${data.data.status}`;
+                                statusBadge.textContent = data.data.status_label;
+                                
+                                // Update status info if exists
+                                const statusInfoElement = document.querySelector('.detail-row:has(.text-muted)');
+                                if (data.data.status_info && statusInfoElement) {
+                                    statusInfoElement.querySelector('.text-muted').textContent = data.data.status_info;
+                                } else if (data.data.status_info) {
+                                    // Create new status info row if doesn't exist
+                                    const statusRow = document.querySelector('.status-badge').closest('.detail-row');
+                                    const newRow = document.createElement('div');
+                                    newRow.className = 'detail-row';
+                                    newRow.innerHTML = `
+                                        <strong>Keterangan Status:</strong><br>
+                                        <span class="text-muted">${data.data.status_info}</span>
+                                    `;
+                                    statusRow.parentNode.insertBefore(newRow, statusRow.nextSibling);
+                                }
+                                
                             } else {
                                 alert('Gagal mengupdate status: ' + data.message);
                             }

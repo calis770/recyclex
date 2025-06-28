@@ -268,7 +268,7 @@
             </div>
 
             <div class="deposit-btn">
-                <a href="{{ route('greencashpage') }}"><span>Earn Coins ></span></a>
+                <a href="{{ route('greencashpage') }}"><span>Dapatkan Koin ></span></a>
             </div>
 
             <div class="history-title">My History</div>

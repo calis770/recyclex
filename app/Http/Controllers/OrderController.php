@@ -3,14 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\DetailOrder; // Changed from detail_order
-use App\Models\Product;
-use App\Models\Customer;
-use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str; // Import Str facade for Str::limit
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class OrderController extends Controller
 {
@@ -19,8 +16,7 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        // Use `customer` instead of `Customer` if your relationship name is `customer` in Order model
-        $query = Order::with(['customer', 'payment']);
+        $query = Order::query();
 
         // Filter by status if provided
         if ($request->has('status') && $request->status !== '') {
@@ -32,9 +28,9 @@ class OrderController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('order_id', 'like', "%{$search}%")
-                    ->orWhereHas('customer', function($customerQuery) use ($search) {
-                        $customerQuery->where('customer_name', 'like', "%{$search}%"); // Assuming customer_name in customer table
-                    });
+                  ->orWhere('nama_penerima', 'like', "%{$search}%")
+                  ->orWhere('merchant_name', 'like', "%{$search}%")
+                  ->orWhere('product_name', 'like', "%{$search}%");
             });
         }
 
@@ -49,350 +45,264 @@ class OrderController extends Controller
      */
     public function create()
     {
-        $products = Product::all();
-        $customers = Customer::all();
-        $payments = Payment::all();
-        
-        return view('orders.create', compact('products', 'customers', 'payments'));
+        $statusOptions = Order::getStatusOptions();
+        return view('orders.create', compact('statusOptions'));
     }
 
     /**
      * Store a newly created order in storage.
-     * This method would typically be used by the admin to create manual orders.
-     * For customer orders, a different process (e.g., from a cart) would populate the DB.
      */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'customer_id' => 'required|exists:customer,customer_id',
-            'payment_id' => 'required|exists:payment,payment_id',
             'order_date' => 'required|date',
-            'products' => 'required|array|min:1',
-            'products.*.product_id' => 'required|exists:product,product_id',
-            'products.*.quantity' => 'required|integer|min:1',
-            // 'products.*.item_quantity' => 'required|integer|min:1' // item_quantity seems redundant if quantity already exists
+            'total_price' => 'required|integer|min:0',
+            'status' => 'required|in:UNPAID,PACKED,SENT,DONE,CANCELLED',
+            'merchant_name' => 'required|string|max:255',
+            'product_name' => 'required|string|max:255',
+            'product_description' => 'nullable|string',
+            'product_image' => 'nullable|string|max:255',
+            'quantity' => 'required|integer|min:1',
+            'unit_price' => 'required|integer|min:0',
+            'status_info' => 'nullable|string|max:500',
+            'nama_penerima' => 'required|string|max:255',
+            'nomor_hp' => 'required|string|max:20',
+            'alamat_penerima' => 'required|string|max:500',
+            'kota_penerima' => 'required|string|max:100',
+            'kode_pos_penerima' => 'required|string|max:10',
+            'provinsi' => 'required|string|max:100',
+            'note_pengiriman' => 'nullable|string|max:500',
+            'payment_method' => 'required|string|max:100',
         ]);
 
         if ($validator->fails()) {
-            return redirect()->route('orders.create')
+            return redirect()->back()
                 ->withErrors($validator)
-                ->withInput();
+                ->withInput()
+                ->with('error', 'Silakan periksa input Anda.');
         }
 
         DB::beginTransaction();
+        
         try {
-            // Generate order ID
-            $order_id = 'ORD' . str_pad(Order::count() + 1, 5, '0', STR_PAD_LEFT); // Simple incrementing ID
+            // Generate unique order ID
+            $orderId = $this->generateOrderId();
 
-            $total_price = 0;
-            $subtotal = 0;
-            $tax_rate = 0.1; // 10% tax
+            // Calculate total_price from unit_price and quantity if not provided
+            $totalPrice = $request->total_price ?: ($request->unit_price * $request->quantity);
 
-            foreach ($request->input('products') as $productData) {
-                $product = Product::where('product_id', $productData['product_id'])->first();
-                if (!$product) {
-                    throw new \Exception("Product with ID {$productData['product_id']} not found.");
-                }
-                $subtotal += $product->price * $productData['quantity'];
-            }
-            $tax_amount = $subtotal * $tax_rate;
-            $total_price = $subtotal + $tax_amount;
-
-            // Create order with default status
-            $orderData = [
-                'order_id' => $order_id,
-                'customer_id' => $request->input('customer_id'),
-                'payment_id' => $request->input('payment_id'),
-                'order_date' => $request->input('order_date'),
-                'total_price' => $total_price,
-                'subtotal' => $subtotal,
-                'tax_amount' => $tax_amount,
-                'status' => 'UNPAID', // Default status for new orders
-                'status_info' => 'Menunggu pembayaran dari pelanggan'
-            ];
-
-            $order = Order::create($orderData);
-
-            // Create order details
-            foreach ($request->input('products') as $productData) {
-                $detail_id = 'DTL' . str_pad(DetailOrder::count() + 1, 6, '0', STR_PAD_LEFT); // Simple incrementing ID
-                $product = Product::where('product_id', $productData['product_id'])->first(); // Fetch product again for its price
-
-                DetailOrder::create([
-                    'detail_id' => $detail_id,
-                    'order_id' => $order_id,
-                    'product_id' => $productData['product_id'],
-                    'quantity' => $productData['quantity'],
-                    'price_at_order' => $product->price, // Store the price at the time of order
-                ]);
-            }
+            // Create order
+            $order = Order::create([
+                'order_id' => $orderId,
+                'order_date' => $request->order_date,
+                'total_price' => $totalPrice,
+                'status' => $request->status,
+                'merchant_name' => $request->merchant_name,
+                'product_name' => $request->product_name,
+                'product_description' => $request->product_description,
+                'product_image' => $request->product_image,
+                'quantity' => $request->quantity,
+                'unit_price' => $request->unit_price,
+                'status_info' => $request->status_info,
+                'nama_penerima' => $request->nama_penerima,
+                'nomor_hp' => $request->nomor_hp,
+                'alamat_penerima' => $request->alamat_penerima,
+                'kota_penerima' => $request->kota_penerima,
+                'kode_pos_penerima' => $request->kode_pos_penerima,
+                'provinsi' => $request->provinsi,
+                'note_pengiriman' => $request->note_pengiriman,
+                'payment_method' => $request->payment_method,
+            ]);
 
             DB::commit();
 
             return redirect()->route('orders.index')
-                ->with('success', 'Pesanan berhasil ditambahkan.');
+                ->with('success', "Pesanan #{$orderId} berhasil dibuat.");
 
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->route('orders.create')
-                ->with('error', 'Gagal menambahkan pesanan: ' . $e->getMessage())
-                ->withInput();
+            
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Gagal membuat pesanan: ' . $e->getMessage());
         }
     }
 
     /**
      * Display the specified order.
      */
-    public function show(string $id)
+    public function show($id)
     {
-        try {
-            $order = Order::with(['customer', 'payment', 'detailOrders.product'])
-                ->where('order_id', $id)
-                ->firstOrFail();
-            
-            return view('orders.show', compact('order'));
-        } catch (\Exception $e) {
-            return redirect()->route('orders.index')
-                ->with('error', 'Pesanan tidak ditemukan.');
+        $order = Order::findOrFail($id);
+        
+        if (request()->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'order' => $order,
+                    'status_label' => $order->status_label,
+                    'full_address' => $order->full_address,
+                    'formatted_total' => 'Rp ' . number_format($order->total_price, 0, ',', '.'),
+                    'formatted_unit_price' => 'Rp ' . number_format($order->unit_price, 0, ',', '.'),
+                    'formatted_date' => Carbon::parse($order->order_date)->format('d/m/Y H:i'),
+                ]
+            ]);
         }
+
+        return view('orders.show', compact('order'));
     }
 
     /**
      * Show the form for editing the specified order.
      */
-    public function edit(string $id)
+    public function edit($id)
     {
-        try {
-            $order = Order::with(['detailOrders.product'])
-                ->where('order_id', $id)
-                ->firstOrFail();
-            
-            $customers = Customer::all();
-            $products = Product::all();
-            $payments = Payment::all();
-            $statusOptions = Order::getStatusOptions();
-            
-            return view('orders.edit', compact('order', 'customers', 'products', 'payments', 'statusOptions'));
-        } catch (\Exception $e) {
-            return redirect()->route('orders.index')
-                ->with('error', 'Pesanan tidak ditemukan.');
-        }
+        $order = Order::findOrFail($id);
+        $statusOptions = Order::getStatusOptions();
+
+        return view('orders.edit', compact('order', 'statusOptions'));
     }
 
     /**
      * Update the specified order in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, $id)
     {
+        $order = Order::findOrFail($id);
+
+        // If this is a status update request (AJAX)
+        if ($request->expectsJson() && $request->has('status')) {
+            $validator = Validator::make($request->all(), [
+                'status' => 'required|in:UNPAID,PACKED,SENT,DONE,CANCELLED',
+                'status_info' => 'nullable|string|max:500',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data tidak valid.',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            try {
+                $order->update([
+                    'status' => $request->status,
+                    'status_info' => $request->status_info,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Status pesanan #{$order->order_id} berhasil diupdate menjadi " . Order::getStatusOptions()[$request->status],
+                    'data' => [
+                        'order_id' => $order->order_id,
+                        'status' => $order->status,
+                        'status_label' => $order->status_label,
+                        'status_info' => $order->status_info,
+                    ]
+                ]);
+
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal mengupdate status: ' . $e->getMessage()
+                ], 500);
+            }
+        }
+
+        // Full order update
         $validator = Validator::make($request->all(), [
-            'customer_id' => 'required|exists:customer,customer_id',
-            'payment_id' => 'required|exists:payment,payment_id',
             'order_date' => 'required|date',
+            'total_price' => 'required|integer|min:0',
             'status' => 'required|in:UNPAID,PACKED,SENT,DONE,CANCELLED',
+            'merchant_name' => 'required|string|max:255',
+            'product_name' => 'required|string|max:255',
+            'product_description' => 'nullable|string',
+            'product_image' => 'nullable|string|max:255',
+            'quantity' => 'required|integer|min:1',
+            'unit_price' => 'required|integer|min:0',
             'status_info' => 'nullable|string|max:500',
-            'products' => 'required|array|min:1',
-            'products.*.product_id' => 'required|exists:product,product_id',
-            'products.*.quantity' => 'required|integer|min:1',
-            // 'products.*.item_quantity' => 'required|integer|min:1' // Redundant field removed
+            'nama_penerima' => 'required|string|max:255',
+            'nomor_hp' => 'required|string|max:20',
+            'alamat_penerima' => 'required|string|max:500',
+            'kota_penerima' => 'required|string|max:100',
+            'kode_pos_penerima' => 'required|string|max:10',
+            'provinsi' => 'required|string|max:100',
+            'note_pengiriman' => 'nullable|string|max:500',
+            'payment_method' => 'required|string|max:100',
         ]);
 
         if ($validator->fails()) {
-            return redirect()->route('orders.edit', $id)
+            return redirect()->back()
                 ->withErrors($validator)
-                ->withInput();
+                ->withInput()
+                ->with('error', 'Silakan periksa input Anda.');
         }
 
         DB::beginTransaction();
+        
         try {
-            $order = Order::where('order_id', $id)->firstOrFail();
+            // Calculate total_price from unit_price and quantity if not provided
+            $totalPrice = $request->total_price ?: ($request->unit_price * $request->quantity);
 
-            $total_price = 0;
-            $subtotal = 0;
-            $tax_rate = 0.1; // 10% tax
-
-            foreach ($request->input('products') as $productData) {
-                $product = Product::where('product_id', $productData['product_id'])->first();
-                if (!$product) {
-                    throw new \Exception("Product with ID {$productData['product_id']} not found.");
-                }
-                $subtotal += $product->price * $productData['quantity'];
-            }
-            $tax_amount = $subtotal * $tax_rate;
-            $total_price = $subtotal + $tax_amount;
-
-
-            // Update order data
-            $orderData = [
-                'customer_id' => $request->input('customer_id'),
-                'payment_id' => $request->input('payment_id'),
-                'total_price' => $total_price,
-                'subtotal' => $subtotal,
-                'tax_amount' => $tax_amount,
-                'order_date' => $request->input('order_date'),
-                'status' => $request->input('status'),
-                'status_info' => $request->input('status_info')
-            ];
-
-            $order->update($orderData);
-
-            // Delete existing order details
-            DetailOrder::where('order_id', $id)->delete(); // Changed from detail_order
-
-            // Create new order details
-            foreach ($request->input('products') as $productData) {
-                $detail_id = 'DTL' . str_pad(DetailOrder::count() + 1, 6, '0', STR_PAD_LEFT); // Simple incrementing ID for new details
-                $product = Product::where('product_id', $productData['product_id'])->first(); // Fetch product again for its price
-
-                DetailOrder::create([ // Changed from detail_order
-                    'detail_id' => $detail_id,
-                    'order_id' => $id,
-                    'product_id' => $productData['product_id'],
-                    'quantity' => $productData['quantity'],
-                    'price_at_order' => $product->price, // Store the price at the time of order
-                ]);
-            }
+            // Update order
+            $order->update([
+                'order_date' => $request->order_date,
+                'total_price' => $totalPrice,
+                'status' => $request->status,
+                'merchant_name' => $request->merchant_name,
+                'product_name' => $request->product_name,
+                'product_description' => $request->product_description,
+                'product_image' => $request->product_image,
+                'quantity' => $request->quantity,
+                'unit_price' => $request->unit_price,
+                'status_info' => $request->status_info,
+                'nama_penerima' => $request->nama_penerima,
+                'nomor_hp' => $request->nomor_hp,
+                'alamat_penerima' => $request->alamat_penerima,
+                'kota_penerima' => $request->kota_penerima,
+                'kode_pos_penerima' => $request->kode_pos_penerima,
+                'provinsi' => $request->provinsi,
+                'note_pengiriman' => $request->note_pengiriman,
+                'payment_method' => $request->payment_method,
+            ]);
 
             DB::commit();
 
             return redirect()->route('orders.index')
-                ->with('success', 'Pesanan berhasil diperbarui.');
+                ->with('success', "Pesanan #{$order->order_id} berhasil diupdate.");
 
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->route('orders.index')
-                ->with('error', 'Gagal memperbarui pesanan: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Update only the order status (AJAX endpoint for quick status updates)
-     */
-    public function updateStatus(Request $request, string $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'status' => 'required|in:UNPAID,PACKED,SENT,DONE,CANCELLED',
-            'status_info' => 'nullable|string|max:500'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $order = Order::where('order_id', $id)->firstOrFail();
             
-            $order->status = $request->status;
-            // Only update status_info if it's provided and not empty
-            if ($request->filled('status_info')) {
-                $order->status_info = $request->status_info;
-            } else {
-                // If status_info is empty, set it to the default based on new status
-                $order->status_info = $order->getStatusInfoAttribute(null); // Pass null to get default
-            }
-            
-            $order->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Status pesanan berhasil diperbarui',
-                'order' => [
-                    'order_id' => $order->order_id,
-                    'status' => $order->status,
-                    'status_label' => $order->status_label,
-                    'status_info' => $order->status_info // Return the actual (potentially default) status_info
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pesanan tidak ditemukan atau terjadi kesalahan: ' . $e->getMessage()
-            ], 404);
-        }
-    }
-
-    /**
-     * Bulk update order statuses
-     */
-    public function bulkUpdateStatus(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'order_ids' => 'required|array',
-            'order_ids.*' => 'exists:orders,order_id',
-            'status' => 'required|in:UNPAID,PACKED,SENT,DONE,CANCELLED'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $updated = 0;
-            DB::beginTransaction();
-            foreach ($request->order_ids as $orderId) {
-                $order = Order::where('order_id', $orderId)->first();
-                if ($order) {
-                    $order->status = $request->status;
-                    $order->status_info = $order->getStatusInfoAttribute(null); // Set default info for bulk
-                    $order->save();
-                    $updated++;
-                }
-            }
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => "Berhasil memperbarui {$updated} pesanan",
-                'updated_count' => $updated
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollback();
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal memperbarui pesanan: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Gagal mengupdate pesanan: ' . $e->getMessage());
         }
     }
 
     /**
      * Remove the specified order from storage.
      */
-    public function destroy(string $id)
+    public function destroy($id)
     {
-        DB::beginTransaction();
-        try {
-            $order = Order::where('order_id', $id)->firstOrFail();
-            
-            // Delete associated detail orders first to respect foreign key constraints
-            $order->detailOrders()->delete(); // Using relationship to delete
-            
-            // Delete the order
-            $order->delete();
-            
-            DB::commit();
+        $order = Order::findOrFail($id);
 
-            // Check if request expects JSON (for AJAX)
+        try {
+            $orderId = $order->order_id;
+            $order->delete();
+
             if (request()->expectsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Pesanan berhasil dihapus.'
+                    'message' => "Pesanan #{$orderId} berhasil dihapus."
                 ]);
             }
 
             return redirect()->route('orders.index')
-                ->with('success', 'Pesanan berhasil dihapus.');
+                ->with('success', "Pesanan #{$orderId} berhasil dihapus.");
 
         } catch (\Exception $e) {
-            DB::rollback();
-            
-            // Check if request expects JSON (for AJAX)
             if (request()->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -400,108 +310,113 @@ class OrderController extends Controller
                 ], 500);
             }
 
-            return redirect()->route('orders.index')
+            return redirect()->back()
                 ->with('error', 'Gagal menghapus pesanan: ' . $e->getMessage());
         }
     }
 
     /**
-     * Get order details for AJAX request
+     * Bulk update order status.
      */
-    public function getOrderDetails(string $id)
+    public function bulkUpdateStatus(Request $request)
     {
-        try {
-            $order = Order::with(['detailOrders.product', 'customer', 'payment'])
-                ->where('order_id', $id)
-                ->firstOrFail();
-            
-            return response()->json([
-                'success' => true,
-                'data' => $order
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pesanan tidak ditemukan.'
-            ], 404);
-        }
-    }
+        $validator = Validator::make($request->all(), [
+            'order_ids' => 'required|array|min:1',
+            'order_ids.*' => 'required|exists:orders,order_id',
+            'status' => 'required|in:UNPAID,PACKED,SENT,DONE,CANCELLED',
+        ]);
 
-    /**
-     * Calculate total price based on selected products (for AJAX)
-     */
-    public function calculateTotal(Request $request)
-    {
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data tidak valid.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         try {
-            $products = $request->input('products', []);
-            $subtotal = 0;
-            
-            foreach ($products as $productData) {
-                // Ensure product_id and quantity are present and valid
-                if (!isset($productData['product_id']) || !isset($productData['quantity'])) {
-                    throw new \Exception("Invalid product data provided.");
-                }
-                $product = Product::where('product_id', $productData['product_id'])->first();
-                if ($product) {
-                    $subtotal += $product->price * $productData['quantity'];
-                } else {
-                    // Optionally, handle cases where product is not found
-                    throw new \Exception("Product with ID {$productData['product_id']} not found for calculation.");
-                }
-            }
-            
-            $tax_rate = 0.1; // 10% tax
-            $tax_amount = $subtotal * $tax_rate;
-            $total_price = $subtotal + $tax_amount;
-            
+            $updatedCount = Order::whereIn('order_id', $request->order_ids)
+                ->update([
+                    'status' => $request->status,
+                    'status_info' => "Status diupdate secara bulk ke " . Order::getStatusOptions()[$request->status],
+                    'updated_at' => now(),
+                ]);
+
             return response()->json([
                 'success' => true,
-                'subtotal' => $subtotal,
-                'tax_amount' => $tax_amount,
-                'total_price' => $total_price
+                'message' => "{$updatedCount} pesanan berhasil diupdate ke status " . Order::getStatusOptions()[$request->status],
+                'data' => [
+                    'updated_count' => $updatedCount,
+                    'status' => $request->status,
+                ]
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghitung total: ' . $e->getMessage()
+                'message' => 'Gagal melakukan bulk update: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Get orders for frontend display (API endpoint for all customers - NOT RECOMMENDED for customer's My Order)
+     * Generate unique order ID.
      */
-    // public function getOrdersForFrontend(Request $request) // DEPRECATED for customer's view
-    // {
-    //     // This method would show ALL orders. For customer's "My Order", use CustomerOrderController.
-    //     // Kept for reference but won't be used by the customer frontend.
-    // }
+    private function generateOrderId()
+    {
+        $lastOrder = Order::orderBy('order_id', 'desc')->first();
+
+        if (!$lastOrder || !preg_match('/^OD\d{3}$/', $lastOrder->order_id)) {
+            return 'OD001';
+        }
+
+        $lastNumber = (int) substr($lastOrder->order_id, 2);
+        $newNumber = $lastNumber + 1;
+
+        return 'OD' . str_pad($newNumber, 3, '0', STR_PAD_LEFT);
+    }
 
     /**
-     * Get order statistics for dashboard
+     * Get order details for AJAX requests.
      */
-    public function getOrderStatistics()
+    public function getOrderDetails($id)
     {
         try {
-            $stats = [
-                'total_orders' => Order::count(),
-                'packed_orders' => Order::where('status', 'PACKED')->count(),
-                'sent_orders' => Order::where('status', 'SENT')->count(),
-                'completed_orders' => Order::where('status', 'DONE')->count(),
-                'cancelled_orders' => Order::where('status', 'CANCELLED')->count(),
-                'today_orders' => Order::whereDate('order_date', today())->count(),
-                'total_revenue' => Order::where('status', 'DONE')->sum('total_price')
-            ];
-
+            $order = Order::findOrFail($id);
+            
             return response()->json([
                 'success' => true,
-                'statistics' => $stats
+                'data' => [
+                    'order_id' => $order->order_id,
+                    'merchant_name' => $order->merchant_name ?? 'N/A',
+                    'product_name' => $order->product_name ?? 'N/A',
+                    'product_description' => $order->product_description ?? 'N/A',
+                    'product_image' => $order->product_image,
+                    'quantity' => $order->quantity,
+                    'unit_price' => $order->unit_price,
+                    'nama_penerima' => $order->nama_penerima ?? 'N/A',
+                    'nomor_hp' => $order->nomor_hp ?? 'N/A',
+                    'alamat_penerima' => $order->alamat_penerima ?? 'N/A',
+                    'kota_penerima' => $order->kota_penerima ?? 'N/A',
+                    'kode_pos_penerima' => $order->kode_pos_penerima ?? 'N/A',
+                    'provinsi' => $order->provinsi ?? 'N/A',
+                    'note_pengiriman' => $order->note_pengiriman,
+                    'payment_method' => $order->payment_method ?? 'N/A',
+                    'order_date' => Carbon::parse($order->order_date)->format('d/m/Y H:i'),
+                    'status' => $order->status,
+                    'status_label' => $order->status_label,
+                    'status_info' => $order->status_info,
+                    'total_price' => $order->total_price,
+                    'formatted_unit_price' => 'Rp ' . number_format($order->unit_price, 0, ',', '.'),
+                    'formatted_total' => 'Rp ' . number_format($order->total_price, 0, ',', '.'),
+                    'full_address' => $order->full_address,
+                ]
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal mengambil statistik pesanan: ' . $e->getMessage()
+                'message' => 'Gagal mengambil detail pesanan: ' . $e->getMessage()
             ], 500);
         }
     }
